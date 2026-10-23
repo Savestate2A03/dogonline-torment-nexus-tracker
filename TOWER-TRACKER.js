@@ -158,6 +158,7 @@
             { source: 'log', target: 'log', get indicator() { return [] } }, // leave page logs unchanged
             { source: 'warn', target: 'warn', get indicator() { return prepend(this.source, CSS.fg.orange) } },
             { source: 'error', target: 'error', get indicator() { return prepend(this.source, CSS.fg.red) } },
+            { source: 'override', target: 'log', get indicator() { return prepend(this.source, CSS.fg.cyan) } },
         ];
         if (CACHE.get('logging') === null) {
             CACHE.set('logging', {});
@@ -357,6 +358,7 @@
         image: enemy.image,
         hp: enemy.hp,
         maxHp: enemy.maxHp,
+        clone: enemy?.clone ?? false,
     });
 
     // keep track of enemy maxHp
@@ -381,11 +383,11 @@
     });
 
     // track the user's chosen weapon
-    const use_combat_weapon = (weapon, request_id = 0) => {
+    const use_combat_weapon = (weapon, request_id = 0, on_cooldown = false) => {
         if (!initalized() || weapon == null) return null;
-        if (CACHE.get('state')?.['resolving_weapon_use']) return pending_weapon_use;
-        pending_weapon_use = create_weapon_use(weapon, request_id);
-        CACHE.assign('tracking', { pending: weapon });
+        if (!on_cooldown && CACHE.get('state')?.['resolving_weapon_use']) return pending_weapon_use;
+        pending_weapon_use = create_weapon_use(on_cooldown ? null : weapon, request_id);
+        CACHE.assign('tracking', { pending: pending_weapon_use.item });
         return pending_weapon_use;
     };
 
@@ -407,6 +409,11 @@
         return action?.revision === tower_revision ? action : null;
     };
 
+    const is_weapon_on_cooldown = (
+        weapon_index,
+        combat_items = CACHE.get('tower_state_raw')?.['ui']?.['combatItems']
+    ) => (combat_items?.[`cell${weapon_index}`]?.['cooldownTurnsLeft'] ?? 0) > 0;
+
     // keep each tile queue separate from one another
     const get_queue = (coordinates = CACHE.get('state')?.['coordinates']) => {
         const tilekey = get_tile_key(coordinates);
@@ -421,7 +428,7 @@
     const add_split_enemy_to_back_of_queue = (enemy = CACHE.get('state')?.['mob'], coordinates = CACHE.get('state')?.['coordinates']) => {
         const queue = get_queue(coordinates);
         if (!queue || !enemy) return;
-        queue.push({ ...copy_enemy(enemy), hp: enemy.maxHp });
+        queue.push({ ...copy_enemy(enemy), hp: enemy.maxHp, clone: true });
     };
 
     // remove only the front-most enemy (banished or defeated)
@@ -454,12 +461,12 @@
     };
 
     // update the current enemy in the enemy queue given the reported enemy data
-    const update_current_enemy_in_queue = (name, image, hp, maxHp, coordinates = CACHE.get('state')?.['coordinates']) => {
+    const update_current_enemy_in_queue = (name, image, hp, maxHp, clone = null, coordinates = CACHE.get('state')?.['coordinates']) => {
         const queue = get_queue(coordinates);
         if (!queue) return;
-        const enemy = { name, image, hp, maxHp };
+        const enemy = { name, image, hp, maxHp, clone: clone ?? false };
         if (queue.length === 0) queue.push(enemy);
-        else Object.assign(queue[0], enemy);
+        else Object.assign(queue[0], { ...enemy, clone: clone ?? queue[0]['clone'] });
     };
 
     // convert queues on every tile to a banished enemy
@@ -470,7 +477,8 @@
             if (!Array.isArray(queue)) continue;
             for (const enemy of queue) {
                 if (enemy.name !== target.name) {
-                    Object.assign(enemy, { name: target.name, image: target.image, hp: target_hp, maxHp: target_hp });
+                    // note: converted enemies from banish lose their clone status
+                    Object.assign(enemy, { name: target.name, image: target.image, hp: target_hp, maxHp: target_hp, clone: false });
                 }
             }
         }
@@ -486,6 +494,61 @@
             return /\benemy\s+?was\s+?banished\b/i.test(text);
         });
     };
+
+    // yeah it's a long function name
+    const check_and_remove_enemy_death_animation_to_remove_grayscale_death_animation_if_no_longer_clone = () => {
+        const selector = 'div[class*="tower_tuiMobPortrait"] div[class*="tower_portraitImageContainer"] img[class*="tower_portraitImage"]';
+        const portrait = document.querySelector(selector);
+        const is_clone = (
+            CACHE.get('state')?.['mob']?.['visible'] === true &&
+            get_queue()?.[0]?.['clone'] === true
+        );
+
+        if (portrait !== null && !is_clone) {
+            const animation = window.getComputedStyle(portrait).animation;
+            if (animation.includes('enemy-death')) {
+                // remove stuck death animation from portrait if no longer clone
+                portrait.style.animation = '';
+            }
+        }
+    }
+
+    // forces the enemy that we are currently fighting to always be grayscale if it is a clone...
+    // this "fixes" a bug where certain enemy animations lose the cloned grayscale look.
+    // just a little qol and to fix a thing that has been bothering me for a while.
+    const update_current_mob_grayscale_animation = () => {
+        const selector = 'div[class*="tower_tuiMobPortrait"] div[class*="tower_portraitImageContainer"] img[class*="tower_portraitImage"]';
+        const portrait = document.querySelector(selector);
+        const is_clone = (
+            CACHE.get('state')?.['mob']?.['visible'] === true &&
+            get_queue()?.[0]?.['clone'] === true
+        );
+
+        if (portrait !== null && portrait.classList.contains('tower-stats-enemy-image-clone') !== is_clone) {
+            portrait.classList.toggle('tower-stats-enemy-image-clone', is_clone);
+        }
+
+        let grayscale = CACHE.get('clone_grayscale');
+
+        if (grayscale !== null && ((!is_clone || grayscale.effect?.target) !== portrait)
+        ) {
+            // clear existing grayscale "animation" if the enemy is not a clone
+            grayscale.cancel();
+            CACHE.set('clone_grayscale', null);
+            grayscale = null;
+        }
+
+        if (portrait !== null && is_clone && grayscale === null) {
+            // "play" the grayscale "animation" if the enemy is a clone
+            grayscale = portrait.animate(
+                { filter: ['grayscale(100%)', 'grayscale(100%)'] },
+                { duration: 1, fill: 'both', composite: 'add' }
+            );
+            grayscale.pause();
+            grayscale.currentTime = 0;
+            CACHE.set('clone_grayscale', grayscale);
+        }
+    }
 
     // update queues from observed changes
     const process_enemy_change = (item = CACHE.get('tracking')?.['pending'] ?? null, action = null) => {
@@ -568,12 +631,14 @@
         // split on every scythe hit
         if (weapon === 'Emerald Plasma Scythe' && hit) {
             add_split_enemy_to_back_of_queue();
+            if (!died) queue[0].clone = true;
             effects.split = true;
         }
 
         complete_pending_removal();
         if (CACHE.get('removal_pending') === null && curr['visible'] && curr['hp'] > 0) {
             const summoned_by_trickster_donut = weapon === 'Trickster Donut';
+            let latest_enemy_is_decloned_by_trickster_donut = false;
             if (
                 summoned_by_trickster_donut &&
                 !effects.donut && (
@@ -584,9 +649,12 @@
             ) {
                 remember_original_enemy_hp(curr, curr['maxHp'] / 2);
                 effects.donut = true;
+                latest_enemy_is_decloned_by_trickster_donut = true;
             }
             if (!summoned_by_trickster_donut || effects.donut) remember_original_enemy_hp(curr);
-            update_current_enemy_in_queue(curr['name'], curr['image'], curr['hp'], curr['maxHp']);
+            const is_clone = latest_enemy_is_decloned_by_trickster_donut ? false : (queue?.[0]?.['clone'] ?? false);
+            update_current_enemy_in_queue(curr['name'], curr['image'], curr['hp'], curr['maxHp'], is_clone);
+            check_and_remove_enemy_death_animation_to_remove_grayscale_death_animation_if_no_longer_clone();
             CACHE.assign('tracking', { waiting_for_next_enemy: false });
         }
 
@@ -649,6 +717,7 @@
         const method = config?.['method'] ?? request?.method ?? 'GET';
         const turns = [];
         if (method.toUpperCase() !== 'POST') return turns;
+        const combat_items = CACHE.get('tower_state_raw')?.['ui']?.['combatItems'] ?? null;
 
         let body = config?.['body'];
         if (body === undefined && request !== null) {
@@ -664,7 +733,10 @@
             const turn = entry?.['json']?.['turn'] ?? null;
             if (turn === null) continue;
             const selected = /^use-item-[1-4]$/.test(turn) ? CACHE.get('equip')?.(turn) ?? null : null;
-            const action = selected === null ? null : use_combat_weapon(selected, request_id);
+            const on_cooldown = is_weapon_on_cooldown(Number(turn.slice(-1)));
+            const action = (selected === null)
+                ? null
+                : use_combat_weapon(selected, request_id, on_cooldown, combat_items);
             const item = action?.item ?? null;
             turns.push({ index, item, action });
         }
@@ -765,7 +837,13 @@
             const index = Number(slot.id.slice(slot.id.lastIndexOf('-') + 1));
             const image = queue?.[index]?.['image'] ?? '';
             const wrapper = slot.firstElementChild;
-            if (wrapper.dataset.image !== image) {
+            if (wrapper.dataset.image !== image || wrapper.classList.contains('clone') !== (queue?.[index]?.['clone'] ?? false)) {
+                // add clone class if the respective enemy in the queue is marked as a clone
+                if (queue?.[index]?.['clone'] ?? false) {
+                    wrapper.classList.add('clone');
+                } else if (wrapper.classList.contains('clone')) {
+                    wrapper.classList.remove('clone');
+                }
                 wrapper.style.backgroundImage = image ? `url(${JSON.stringify(image)})` : '';
                 wrapper.dataset.image = image;
             }
@@ -791,6 +869,7 @@
         const stats = document.querySelector('#tower-stats');
         if (stats === null) return;
 
+        update_current_mob_grayscale_animation();
         update_mob_queue_masks();
         update_upcoming_mobs();
 
@@ -1146,6 +1225,10 @@
                         transition: 
                             width var(--transition-time) ease-in-out var(--transition-offset),
                             height var(--transition-time) ease-in-out var(--transition-offset);
+
+                        &.clone {
+                            filter: grayscale(100%);
+                        }
                     }
 
                     &.moving-forward {
@@ -1270,6 +1353,9 @@
                         }
                     }
                 }
+                .tower-stats-enemy-image-clone {
+                    filter: grayscale(100%);
+                }
                 @keyframes adjust-masks {
                     0% {
                         mask-size: 100% 0px, 100% calc(100% - var(--mask-height)), 100% var(--mask-height);
@@ -1360,6 +1446,10 @@
             wrapper_hp.classList.add('tower-stats-enemy-hp-wrapper');
             name.classList.add('tower-stats-enemy-name');
             hp.classList.add('tower-stats-enemy-hp');
+
+            if (enemies[enemy]['clone']) {
+                image.classList.add('tower-stats-enemy-image-clone');
+            }
 
             index.textContent = `${enemy}`;
             image.style.backgroundImage = `url('${enemies[enemy]['image']}')`;
@@ -1628,9 +1718,12 @@
         };
     }
 
-    CACHE.set('initalized', false);
 
+    CACHE.set('initalized', false);
     patch_console_logging();
+
+    console.override('Initializing TOWER-TRACKER.js...');
+
     setup_action_tracking();
     localstorage_restore();
     setup_enemy_queue();
@@ -1654,4 +1747,7 @@
     setup_display_callbacks();
 
     CACHE.set('initalized', true);
+
+    // so the user knows we've successfully installed the tracker for this session
+    console.override('TOWER-TRACKER.js has initialized!');
 })());
