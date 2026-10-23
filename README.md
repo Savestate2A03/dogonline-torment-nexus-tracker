@@ -8,6 +8,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 ## To-Do
 
 - See if Freak Staff works properly (it probably doesn't)
+- Add Peeper Beeper spawn support
 
 ## Using
 
