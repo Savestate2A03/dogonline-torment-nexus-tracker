@@ -5,6 +5,10 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 
 - Failing to Lyre Hot Pot will let reinforcements spawn which are not yet taken into account.<br />This will be fixed. In the meantime, make sure to Lyre your Hot Pots.
 
+## To-Do
+
+- See if Freak Staff works properly (it probably doesn't)
+
 ## Using
 
 Copy the code in [TOWER-TRACKER.js](TOWER-TRACKER.js) using the button provided by GitHub:
