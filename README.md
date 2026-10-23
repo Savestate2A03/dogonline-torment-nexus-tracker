@@ -11,6 +11,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 - Add Peeper Beeper spawn support
 - Add Reaper Peepers Reaper support
 - Make scythed enemy copies monochrome
+- Knowing when Dogmatic Seal is or isn't equipped
 
 ## Using
 
