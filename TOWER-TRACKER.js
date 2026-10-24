@@ -1016,6 +1016,7 @@
                         }
 
                         div.tower-stats-enemy-image {
+                            position: relative;
                             max-width: 32px;
                             max-height: 32px;
                             background-size: contain;
@@ -1024,6 +1025,47 @@
                             min-width: 32px;
                             min-height: 32px;
                             image-rendering: auto;
+
+                            &.tower-stats-enemy-image-clone::before {
+                                content: "";
+                                position: absolute;
+                                top: 0px;
+                                left: 0px;
+                                width: 100%;
+                                height: 100%;
+                                
+                                background-image: inherit; 
+                                background-size: contain;
+                                background-repeat: no-repeat;
+                                background-position: center center;
+
+                                filter: grayscale(100%); 
+                            }
+
+                            &.tower-stats-enemy-image-clone::after {
+                                content: "";
+                                position: absolute;
+                                top: 1px;
+                                left: -3px;
+                                width: 50%;
+                                height: 50%;
+
+                                --emerald-glow: rgba(164, 255, 104, 0.5);
+                                --outline-size: 1px;
+                                
+                                background-image: url('/img/items/weapons/Weapon_Plasma_Ranged.png');
+                                background-size: contain;
+                                background-repeat: no-repeat;
+                                background-position: center center;
+                                
+                                opacity: 1.0;
+
+                                filter:
+                                    drop-shadow(calc(var(--outline-size) * 1.0) 0px 0px var(--emerald-glow))
+                                    drop-shadow(calc(var(--outline-size) * -1.0) 0px 0px var(--emerald-glow))
+                                    drop-shadow(0px calc(var(--outline-size) * 1.0) 0px var(--emerald-glow))
+                                    drop-shadow(0px calc(var(--outline-size) * -1.0) 0px var(--emerald-glow));
+                            }
                         }
 
                         div.tower-stats-enemy-stacked-info {
@@ -1353,6 +1395,9 @@
                         }
                     }
                 }
+                div[class*="tower_tuiMobPortrait"]
+                div[class*="tower_portraitImageContainer"]
+                img[class*="tower_portraitImage"]
                 .tower-stats-enemy-image-clone {
                     filter: grayscale(100%);
                 }
@@ -1446,13 +1491,13 @@
             wrapper_hp.classList.add('tower-stats-enemy-hp-wrapper');
             name.classList.add('tower-stats-enemy-name');
             hp.classList.add('tower-stats-enemy-hp');
-
-            if (enemies[enemy]['clone']) {
-                image.classList.add('tower-stats-enemy-image-clone');
-            }
-
+            
             index.textContent = `${enemy}`;
             image.style.backgroundImage = `url('${enemies[enemy]['image']}')`;
+            if (enemies[enemy]['clone']) {
+                image.classList.add('tower-stats-enemy-image-clone');
+                image.style.backgroundSize = '0 0'; 
+            }
             name.textContent = `${enemies[enemy]['name']}`;
             hp.textContent = `${enemies[enemy]['hp']}/${enemies[enemy]['maxHp']}`;
 
