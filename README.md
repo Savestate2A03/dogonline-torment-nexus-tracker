@@ -18,6 +18,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
   - Addressed in commit [`5a97400`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/5a97400601b4e019ad6accaaaf3731dafa02932f) <sub><i>cloned enemies now grayscale, fix site bugs that make non-cloned enemies grayscale also</i></sub>
   - Addressed in commit [`d224387`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/d224387e50b13072db8ad3232d0a7d395502396a) <sub><i>add scythe indicator (telephony literally impossible to tell if cloned)</i></sub>
 - Knowing when Dogmatic Seal is or isn't equipped
+- Extend scythe overlay graphic to other non-standard spawn types (ex. beeper, reaper, hot pot, trickster donut, etc)
 
 ## Using
 
