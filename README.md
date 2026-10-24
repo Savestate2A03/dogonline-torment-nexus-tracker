@@ -10,7 +10,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 - See if Freak Staff works properly (it probably doesn't)
 - Add Peeper Beeper spawn support
 - Add Reaper Peepers Reaper support
-- Make scythed enemy copies monochrome
+- ~~Make scythed enemy copies monochrome~~ **Addressed in commit [`5a97400`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/5a97400601b4e019ad6accaaaf3731dafa02932f)**
 - Knowing when Dogmatic Seal is or isn't equipped
 
 ## Using
