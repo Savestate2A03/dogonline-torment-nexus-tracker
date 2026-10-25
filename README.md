@@ -13,6 +13,8 @@ You can additionally add keyboard controls by following the install instructions
 - [Demonstration Video](#demonstration-video)
 - [Keyboard Controls Screenshots](#keyboard-controls-screenshots)
 
+If you find this tool useful, and you have an hourglass fish to spare... `H2N7E5A3` 🥺
+
 ## Cute Splash Image
 
 <img width="1016" height="1216" alt="image" src="https://github.com/user-attachments/assets/86651dc3-5ea2-4176-bc21-3b333c3d5772" />
