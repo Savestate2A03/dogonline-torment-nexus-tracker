@@ -11,7 +11,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 
 ## To-Do
 
-- ~~See if Freak Staff works properly (it probably doesn't)~~ **It does. I'm amazing.**
+- ~~See if Freak Staff works properly (it probably doesn't)~~ **It does.** I'm amazing.
 - Add Peeper Beeper spawn support
 - Add Reaper Peepers Reaper support
 - ~~Make scythed enemy copies monochrome~~
