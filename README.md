@@ -19,6 +19,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
   - Addressed in commit [`d224387`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/d224387e50b13072db8ad3232d0a7d395502396a) <sub><i>add scythe indicator (telephony literally impossible to tell if cloned)</i></sub>
 - Knowing when Dogmatic Seal is or isn't equipped
 - Extend scythe overlay graphic to other non-standard spawn types (ex. beeper, reaper, hot pot, trickster donut, etc)
+- Add pop up warning if you try to start a run with gold boot + a weapon equipped
 
 ## Using
 
