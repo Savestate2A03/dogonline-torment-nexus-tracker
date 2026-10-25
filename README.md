@@ -32,6 +32,7 @@ You can additionally add keyboard controls by following the install instructions
 - Knowing when Dogmatic Seal is or isn't equipped
 - Extend scythe overlay graphic to other non-standard spawn types (ex. beeper, reaper, hot pot, trickster donut, etc)
 - Add pop up warning if you try to start a run with gold boot + a weapon equipped
+- Congo line toggle
 
 ## Using
 
