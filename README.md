@@ -4,6 +4,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 **NEW 10/24/2026**<BR />
 You can additionally add keyboard controls by following the install instructions below but for [KEYBOARD-CONTROLS.js](KEYBOARD-CONTROLS.js)
 
+<!-- https://docs-md.com/markdown-toc-generator -->
 ### Table of Contents
 - [Cute Splash Image](#cute-splash-image)
 - [Current Possible Bugs](#current-possible-bugs)
