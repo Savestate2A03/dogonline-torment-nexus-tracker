@@ -1,6 +1,17 @@
 # dogonline-torment-nexus-tracker
 Track your queue and loot for dogonline.net when torment nexus-ing.
 
+**NEW 10/24/2026**<BR />
+You can additionally add keyboard controls by following the install instructions below but for [KEYBOARD-CONTROLS.js](KEYBOARD-CONTROLS.js)
+
+### Table of Contents
+- [Cute Splash Image](#cute-splash-image)
+- [Current Possible Bugs](#current-possible-bugs)
+- [To-Do](#to-do)
+- [Using](#using)
+- [Demonstration Video](#demonstration-video)
+- [Keyboard Controls Screenshots](#keyboard-controls-screenshots)
+
 ## Cute Splash Image
 
 <img width="1016" height="1216" alt="image" src="https://github.com/user-attachments/assets/86651dc3-5ea2-4176-bc21-3b333c3d5772" />
@@ -34,3 +45,6 @@ Open [The Lonely Tower](https://dogonline.net/tower) on dogonline.net, press F12
 ## Demonstration Video
 https://github.com/user-attachments/assets/864d239e-08c0-4016-a093-b07ff072f022
 
+## Keyboard Controls Screenshots
+
+<img width="1485" height="750" alt="image" src="https://github.com/user-attachments/assets/4b9edd19-9075-494b-882c-50c66bef7d65" />
