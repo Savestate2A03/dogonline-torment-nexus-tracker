@@ -14,6 +14,7 @@ You can additionally add keyboard controls by following the install instructions
 - [Keyboard Controls Screenshots](#keyboard-controls-screenshots)
 
 If you find this tool useful, and you have an hourglass fish to spare... `H2N7E5A3` 🥺
+<br />OR MULTI DIMENSIONAL DICE &gt;&lt;
 
 ## Cute Splash Image
 
