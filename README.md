@@ -36,6 +36,10 @@ If you find this tool useful, and you have an hourglass fish to spare... `H2N7E5
 - Extend scythe overlay graphic to other non-standard spawn types (ex. beeper, reaper, hot pot, trickster donut, etc)
 - Add pop up warning if you try to start a run with gold boot + a weapon equipped
 - Congo line toggle
+- Frisbee Tracker
+- Persist Loot Option Between Dives
+- Detect if No Longer In Tower (But Floor isn’t Clear, eg suspended)
+
 
 ## Using
 
