@@ -10,7 +10,7 @@ New options menu added in commit [`8d8e8c5`](https://github.com/Savestate2A03/do
 - Congo line enable/disable
 - Automatic scrolling enable/disable
 <img width="360" height="158" alt="image" src="https://github.com/user-attachments/assets/2504cb85-8220-4e81-9298-e9e42c2805a9" />
-
+...along with a bugfix that kept the tracker up when leaving the tower mid-session
 
 <!-- https://docs-md.com/markdown-toc-generator -->
 ## Table of Contents
