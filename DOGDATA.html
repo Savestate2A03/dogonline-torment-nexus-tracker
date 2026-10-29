@@ -55,6 +55,9 @@
             --color-bounding-overlay-outline-laser-vision: rgba(2, 253, 2, 1.0);
             --color-bounding-overlay-background: rgba(0, 0, 0, 0.35);
             --color-transparent: rgba(0, 0, 0, 0);
+            --color-scrollbar-track: #3f5177;
+            --color-scrollbar-thumb: #859dc2;
+
 
             /* layering */
             --z-index-inventory-item-hover-overlay: 100;
@@ -205,6 +208,7 @@
         }
 
         main#secondary {
+            --removed-items-max-height: calc(100dvh - 85px);
             position: fixed;
             bottom: -200px;
             right: 16px;
@@ -256,13 +260,15 @@
             div.section#section-removed-items {
                 display: flex;
                 flex-direction: column;
+                flex-wrap: nowrap;
                 align-items: center;
                 padding-left: 20px;
                 padding-right: 20px;
                 border-width: 3px;
                 width: 290px;
                 gap: 0;
-                min-height: 100px;
+                min-height: min(100px, var(--removed-items-max-height));
+                max-height: var(--removed-items-max-height);
                 transition: bottom 0.5s ease-in-out;
 
                 position: fixed;
@@ -273,8 +279,26 @@
                     box-sizing: border-box;
                 }
 
+                > div.title, > div.message {
+                    flex: 0 0 auto;
+                }
+
+                #removed-items-list {
+                    display: flex;
+                    flex-direction: column;
+                    flex: 0 1 auto;
+                    min-height: 0;
+                    width: 100%;
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    overscroll-behavior: contain;
+                    scrollbar-width: thin;
+                    scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+                }
+
                 div.item-in-removed-list-wrapper {
                     display: flex;
+                    flex-shrink: 0;
                     flex-direction: row;
                     align-self: start;
                     gap: 8px;
@@ -2004,6 +2028,10 @@
             };
             const { item_count, time, permanent } = options;
             const secondary = document.getElementById('secondary');
+            const button = document.getElementById('screenshot-button');
+            if (!secondary || !button) return;
+            const maximum_bottom = Math.max(16, window.innerHeight - button.offsetHeight - 16);
+            secondary.style.setProperty('--removed-items-max-height', `${Math.max(0, maximum_bottom - 24)}px`);
             const dynamic_height_adjustment = 20 * Math.max(item_count ?? secondary.querySelectorAll('.item-in-removed-list-wrapper:not(.removing)').length, 1);
             if (time !== null) {
                 const state = SCREENSHOT_BUTTON_POSITION_STATE;
@@ -2030,7 +2058,7 @@
             }
             const distance_from_bottom = 80 + 16 + 8 + dynamic_height_adjustment - 8 + (REMOVED_ITEM_MESSAGE_STATE.showing ? 22 : 0);
             secondary.style.bottom = REMOVED_ITEMS_PENDING_MOVEMENT.currently_showing
-                ? `${Math.max(126, distance_from_bottom)}px`
+                ? `${Math.min(maximum_bottom, Math.max(126, distance_from_bottom))}px`
                 : '16px';
         }
 
@@ -2692,7 +2720,7 @@
 
             wrapper.appendChild(undo);
             wrapper.appendChild(text);
-            list.appendChild(wrapper);
+            document.getElementById('removed-items-list').appendChild(wrapper);
 
             if (REMOVED_ITEMS_PENDING_MOVEMENT.hide_timeout !== null) {
                 clearTimeout(REMOVED_ITEMS_PENDING_MOVEMENT.hide_timeout);
@@ -2823,6 +2851,11 @@
             };
             button.innerText = default_text;
             secondary.appendChild(button);
+            const update_position = () => {
+                if (secondary.style.bottom !== '') update_screenshot_button_position();
+            };
+            new ResizeObserver(update_position).observe(button);
+            window.addEventListener('resize', update_position);
         }
 
         function create_removed_items_list() {
@@ -2839,6 +2872,9 @@
             message.classList.add('closed');
             section.appendChild(title);
             section.appendChild(message);
+            const list = document.createElement('div');
+            list.id = 'removed-items-list';
+            section.appendChild(list);
             secondary.appendChild(section);
         }
 
@@ -2932,6 +2968,7 @@
             });
 
             page.addEventListener('wheel', (event) => {
+                if (event.target instanceof Element && event.target.closest('#removed-items-list')) return;
                 event.preventDefault();
 
                 if (!ZOOM_SCROLLWHEL_STATE.active) { return; }
