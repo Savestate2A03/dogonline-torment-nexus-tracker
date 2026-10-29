@@ -11,12 +11,670 @@
     //  - error
     const LOGGING_LEVEL = 'log';
 
-    const SAVED_LOCALSTORAGE_OBJECTS = ['state', 'prev', 'user_combat_items', 'tower_state_raw', 'enemy_queue', 'original_enemy_hp', 'removal_pending', 'session_stats'];
+    const SAVED_LOCALSTORAGE_OBJECTS = [
+        'state',
+        'prev',
+        'user_combat_items',
+        'tower_state_raw',
+        'enemy_queue',
+        'original_enemy_hp',
+        'removal_pending',
+        'session_stats',
+        'user_options'
+    ];
     const LOCALSTORAGE_KEY = 'SAVED_TOWER_TRACKER_DATA';
     let pending_weapon_use = null;
     let tower_revision = 0;
     let next_request_id = 0;
     let upcoming_mob_revision = 0;
+
+    const TOWER_STYLE = `
+        :root {
+            interpolate-size: allow-keywords; 
+        }
+        #tower-options {
+            --top: 0px;
+            --right: 0px;
+            margin: 0;
+            padding: 0;
+            position: fixed;
+            top: var(--top, 8px);
+            right: var(--right, 8px);
+            display: flex;
+            flex-direction: column;
+            z-index: 999999;
+            margin-right: 12px;
+            margin-top: 6px;
+
+            font-size: 24px;
+            * {
+                font-size: inherit;
+            }
+        }
+        #tower-options-expand, #tower-option-list {
+        }
+        #tower-options-expand {
+            text-align: right;
+            user-select: none;
+
+            span {
+                cursor: pointer;
+                position: relative;
+                top: 0px;
+                left: 0px;
+
+                &:hover {
+                    text-shadow: 0 0 3px white;
+                }
+                &:active {
+                    opacity: 0.7;
+                    position: relative;
+                    top: 1px;
+                    left: 1px;
+                }
+            }
+        }
+        #tower-option-list-wrapper {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease;
+            overflow: hidden;
+
+            &.expanded {
+                grid-template-rows: 1fr;
+            }
+        }
+        #tower-option-list {
+            min-height: 0;
+        }
+        .tower-option-list-item {
+            display: flex;
+            flex-direction: row;
+            gap: 6px;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .tower-option-list-item-input {
+            &[type="checkbox"] {
+                appearance: none;
+                -webkit-appearance: none;
+                margin: 0;
+                padding: 0;
+                width: 16px;
+                height: 16px;
+                border-color: var(--text);
+                border-width: 1px;
+                border-style: solid;
+                position: relative;
+                top: 0px;
+                left: 0px;
+
+                &:hover {
+                    text-shadow: 0 0 2px white;
+                }
+
+                &:active {
+                    top: 1px;
+                    left: 1px;
+                }
+
+                &::before {
+                    content: "";
+                    font-family: NDS BIOS, sans-serif;
+                    font-size: 32px;
+                    line-height: 16px;
+                    position: absolute;
+                    top: -5px;
+                    left: 0px;
+                    display: block;
+                    width: 17px;
+                    height: 17px;
+                    margin: 0;
+                    padding: 0;
+                    text-align: center;
+                }
+
+                &:checked {
+                    &::before {
+                        content: "x";
+                    }
+                }
+            }
+        }
+        .tower-option-list-item-label { }
+        #tower-stats {
+            --top: 0px;
+            --left: 0px;
+            width: 240px;
+            position: fixed;
+            margin: 0;
+            padding: 0;
+            margin-top: 8px;
+            margin-left: 8px;
+            top: var(--top);
+            left: var(--left);
+            display: none;
+            overflow: visible;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+
+            filter: 
+                drop-shadow(2px 0px 0px var(--surface-bg))
+                drop-shadow(-2px 0px 0px var(--surface-bg))
+                drop-shadow(0px 2px 0px var(--surface-bg))
+                drop-shadow(0px -2px 0px var(--surface-bg))
+                drop-shadow(1px 1px 1px var(--surface-bg))
+                drop-shadow(1px 1px 2px color-mix(in srgb, var(--text) 15%, transparent));
+
+            z-index: 999999;
+        }
+        #tower-stats-title, #tower-stats-title-lower {
+            font-family: NDS BIOS,sans-serif;
+            color: var(--text);
+            font-size: 24px;
+            margin: 0;
+            padding: 0;
+            line-height: 24px;
+        }
+        #tower-stats-subtitle, #tower-stats-slain, #tower-stats-loot {
+            font-family: NDS BIOS, sans-serif;
+            color: var(--text);
+            font-size: 16px;
+            margin: 0;
+            padding: 0;
+            line-height: 16px;
+            width: 100%;
+            text-align: center;
+
+            &#tower-stats-slain, &#tower-stats-loot {
+                width: 90%;
+                text-align: left;
+            }
+        }
+        #tower-stats-queue, #tower-stats-loot-list {
+            --mask-height: 100px;
+            mask-image:
+                linear-gradient(to bottom, transparent, black),
+                linear-gradient(to bottom, black, black),
+                linear-gradient(to bottom, black, transparent);
+            mask-repeat: no-repeat, no-repeat, no-repeat;
+            mask-size: 100% 0px, 100% 100%, 100% 0px;
+            mask-position: top center, center 0px, bottom center;
+
+            -webkit-mask-image:
+                linear-gradient(to bottom, transparent, black),
+                linear-gradient(to bottom, black, black),
+                linear-gradient(to bottom, black, transparent);
+            -webkit-mask-repeat: no-repeat, no-repeat, no-repeat;
+            -webkit-mask-size: 100% 0px, 100% 100%, 100% 0px;
+            -webkit-mask-position: top center, center 0px, bottom center;
+
+            animation: adjust-masks 1s linear both paused;
+        }
+        #tower-stats-queue {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: calc(280px - 8px - 24px);
+            gap: 0px;
+
+            --scrollbar-handle-r: calc((255 + 249)/2);
+            --scrollbar-handle-g: calc((229 + 165)/2);
+            --scrollbar-handle-b: calc((0 + 0)/2);
+
+            --scrollbar-base-r: 255;
+            --scrollbar-base-g: 0;
+            --scrollbar-base-b: 88;
+
+            overflow-y: scroll;
+            scrollbar-width: thin;
+            scrollbar-color: 
+                rgba(var(--scrollbar-handle-r), var(--scrollbar-handle-g), var(--scrollbar-handle-b), 0.75)
+                rgba(var(--scrollbar-base-r), var(--scrollbar-base-g), var(--scrollbar-base-b), 0.525);
+
+            /* put scrollbar on left side */
+
+            direction: rtl;
+            * {
+                direction: ltr;
+            }
+
+            div.tower-stats-enemy {
+                display: flex;
+                margin: 0;
+                padding: 0;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                align-items: center;
+                justify-content: space-evenly;
+                gap: 0px;
+
+                width: 100%;
+                
+                div {
+                    font-family: NDS BIOS,sans-serif;
+                    color: var(--text);
+                    font-size: 16px;
+                    line-height: 16px;
+                }
+
+                div.tower-stats-enemy-index {
+                    min-width: 38px;
+                    max-width: 38px;
+                    text-align: center;
+                }
+
+                div.tower-stats-enemy-image {
+                    position: relative;
+                    max-width: 32px;
+                    max-height: 32px;
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center center;
+                    min-width: 32px;
+                    min-height: 32px;
+                    image-rendering: auto;
+
+                    &.tower-stats-enemy-image-clone::before {
+                        content: "";
+                        position: absolute;
+                        top: 0px;
+                        left: 0px;
+                        width: 100%;
+                        height: 100%;
+                        
+                        background-image: inherit; 
+                        background-size: contain;
+                        background-repeat: no-repeat;
+                        background-position: center center;
+
+                        filter: grayscale(100%); 
+                    }
+
+                    &.tower-stats-enemy-image-clone::after {
+                        content: "";
+                        position: absolute;
+                        top: 1px;
+                        left: -3px;
+                        width: 50%;
+                        height: 50%;
+
+                        --emerald-glow: rgba(164, 255, 104, 0.5);
+                        --outline-size: 1px;
+                        
+                        background-image: url('/img/items/weapons/Weapon_Plasma_Ranged.png');
+                        background-size: contain;
+                        background-repeat: no-repeat;
+                        background-position: center center;
+                        
+                        opacity: 1.0;
+
+                        filter:
+                            drop-shadow(calc(var(--outline-size) * 1.0) 0px 0px var(--emerald-glow))
+                            drop-shadow(calc(var(--outline-size) * -1.0) 0px 0px var(--emerald-glow))
+                            drop-shadow(0px calc(var(--outline-size) * 1.0) 0px var(--emerald-glow))
+                            drop-shadow(0px calc(var(--outline-size) * -1.0) 0px var(--emerald-glow));
+                    }
+                }
+
+                div.tower-stats-enemy-stacked-info {
+                    display: flex;
+                    margin: 0;
+                    padding: 0;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 0px;
+                    width: 146px;
+
+                    div.tower-stats-enemy-name-wrapper {
+                        display: flex;
+                        margin: 0;
+                        padding: 0;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 0px;
+                        height: 16px;
+
+                        div.tower-stats-enemy-name {
+                            text-align: center;
+                        }
+                    }
+
+                    div.tower-stats-enemy-hp-wrapper {
+                        --full-width: 120px;
+                        --full-height: 20px;
+                        --bar-scalar: 0.90;
+                        --current-percentage: 100%;
+
+                        display: flex;
+                        margin: 0;
+                        padding: 0;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 0px;
+                        width: var(--full-width);
+                        height: var(--full-height);
+
+                        image-rendering: auto;
+
+                        background-image: 
+                            url('/img/tower/tower_ui_lifebar.png'),
+                            url('/img/tower/tower_ui_lifebar_bg.png');
+                        background-size:
+                            var(--full-width) var(--full-height),
+                            calc(var(--current-percentage) * var(--bar-scalar)) 95%;
+                        background-position:
+                            center center,
+                            left center;
+                        background-repeat:
+                            no-repeat,
+                            no-repeat;
+                        
+                        background-position-x: 
+                            0px,
+                            calc((var(--full-width) - (var(--full-width) * var(--bar-scalar))) / 2);
+
+                        div.tower-stats-enemy-hp {
+                            text-align: center;
+                            font-size: 14px;
+                            line-height: 16px;
+                            position: relative;
+                            top: -1px;
+                        }
+                    }
+
+                }
+            }
+        }
+        #tower-stats-loot-list {
+            --mask-height: 24px;
+            --internal-offset: 0.01;
+            --base-width: 215px;
+            --cut-sides: calc(var(--base-width) - (var(--base-width) * var(--internal-offset)));
+            --width: round(down, var(--cut-sides), 1px);
+            --left: round(up, calc((var(--base-width) - var(--width)) / 2), 1px);
+
+            --scrollbar-handle-r: calc((255 + 249)/2);
+            --scrollbar-handle-g: calc((229 + 165)/2);
+            --scrollbar-handle-b: calc((0 + 0)/2);
+            --scrollbar-base-r: 255;
+            --scrollbar-base-g: 0;
+            --scrollbar-base-b: 88;
+
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            padding: 0;
+
+            overflow-y: scroll;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(var(--scrollbar-handle-r), var(--scrollbar-handle-g), var(--scrollbar-handle-b), 0.75) rgba(var(--scrollbar-base-r), var(--scrollbar-base-g), var(--scrollbar-base-b), 0.525);
+
+            position: relative;
+            width: var(--width);
+            left: var(--left);
+            max-height: 110px;
+            min-height: 110px;
+            padding-left: 8px;
+
+            /* put scrollbar on left side */
+
+            direction: rtl;
+            * {
+                direction: ltr;
+            }
+
+            div.tower-stats-loot-list-item {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+                padding: 0;
+
+                div.tower-stats-loot-list-item-image {
+                    min-height: 20px;
+                    min-width: 20px;
+                    max-width: 20px;
+                    max-height: 20px;
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center center;
+                    image-rendering: auto;
+                }
+
+                div.tower-stats-loot-list-item-name {
+                    font-size: 16px;
+                }
+            }
+        }
+        div.tower-stats-upcoming-mob {
+            overflow: visible;
+            pointer-events: none;
+            position: relative;
+            display: block;
+            width: 0px;
+            height: 0px;
+
+            padding: 0;
+            margin: 0;
+            margin-top: -10px; /* offsets gap in parent flexbox */
+
+            --mob-base-top: 55px;
+            --mob-base-left: -110px;
+            --mob-base-opacity: 0.0;
+            --mob-base-width: 218px;
+            --mob-base-height: 218px;
+
+            --mob-1-top: 64px;
+            --mob-1-left: 26px;
+            --mob-1-opacity: 0.8;
+            --mob-1-width: 200px;
+            --mob-1-height: 200px;
+
+            --mob-2-top: 50px;
+            --mob-2-left: 100px;
+            --mob-2-opacity: 0.6;
+            --mob-2-width: 174px;
+            --mob-2-height: 174px;
+
+            --mob-3-top: 40px;
+            --mob-3-left: 150px;
+            --mob-3-opacity: 0.4;
+            --mob-3-width: 160px;
+            --mob-3-height: 160px;
+
+            --mob-4-top: 30px;
+            --mob-4-left: 190px;
+            --mob-4-opacity: 0.2;
+            --mob-4-width: 150px;
+            --mob-4-height: 150px;
+
+            --mob-5-top: 10px;
+            --mob-5-left: 220px;
+            --mob-5-opacity: 0.0;
+            --mob-5-width: 140px;
+            --mob-5-height: 140px;
+
+            --transition-time: 0.0s;
+            --transition-offset: 0.0s;
+            --transition-offset-stagger: 0.25s;
+
+            transition: 
+                top var(--transition-time) ease-in-out var(--transition-offset),
+                left var(--transition-time) ease-in-out var(--transition-offset),
+                opacity var(--transition-time) ease-in-out var(--transition-offset);
+
+            div.tower-stats-upcoming-mob-image-wrapper {
+                background-repeat: no-repeat;
+                background-position: center center;
+                background-size: contain;
+
+                transition: 
+                    width var(--transition-time) ease-in-out var(--transition-offset),
+                    height var(--transition-time) ease-in-out var(--transition-offset);
+
+                &.clone {
+                    filter: grayscale(100%);
+                }
+            }
+
+            &.moving-forward {
+                --transition-time: 0.5s;
+            }
+
+            &#tower-stats-upcoming-mob-1 {
+                top: var(--mob-1-top);
+                left: var(--mob-1-left);
+                opacity: var(--mob-1-opacity);
+
+                div.tower-stats-upcoming-mob-image-wrapper {
+                    width: var(--mob-1-width);
+                    height: var(--mob-1-height);
+                }
+
+                &.moving-forward {
+                    top: var(--mob-base-top);
+                    left: var(--mob-base-left);
+                    opacity: var(--mob-base-opacity);
+
+                    div.tower-stats-upcoming-mob-image-wrapper {
+                        width: var(--mob-base-width);
+                        height: var(--mob-base-height);
+                    }
+                }
+            }
+
+            &#tower-stats-upcoming-mob-2 {
+                top: var(--mob-2-top);
+                left: var(--mob-2-left);
+                opacity: var(--mob-2-opacity);
+
+                div.tower-stats-upcoming-mob-image-wrapper {
+                    width: var(--mob-2-width);
+                    height: var(--mob-2-height);
+                }
+
+                &.moving-forward {
+                    --transition-offset: calc(var(--transition-offset-stagger) * 1);
+
+                    top: var(--mob-1-top);
+                    left: var(--mob-1-left);
+                    opacity: var(--mob-1-opacity);
+
+                    div.tower-stats-upcoming-mob-image-wrapper {
+                        width: var(--mob-1-width);
+                        height: var(--mob-1-height);
+                    }
+                }
+            }
+
+            &#tower-stats-upcoming-mob-3 {
+                top: var(--mob-3-top);
+                left: var(--mob-3-left);
+                opacity: var(--mob-3-opacity);
+
+                div.tower-stats-upcoming-mob-image-wrapper {
+                    width: var(--mob-3-width);
+                    height: var(--mob-3-height);
+                }
+
+                &.moving-forward {
+                    --transition-offset: calc(var(--transition-offset-stagger) * 2);
+
+                    top: var(--mob-2-top);
+                    left: var(--mob-2-left);
+                    opacity: var(--mob-2-opacity);
+
+                    div.tower-stats-upcoming-mob-image-wrapper {
+                        width: var(--mob-2-width);
+                        height: var(--mob-2-height);
+                    }
+                }
+            }
+
+            &#tower-stats-upcoming-mob-4 {
+                top: var(--mob-4-top);
+                left: var(--mob-4-left);
+                opacity: var(--mob-4-opacity);
+
+                div.tower-stats-upcoming-mob-image-wrapper {
+                    width: var(--mob-4-width);
+                    height: var(--mob-4-height);
+                }
+
+                &.moving-forward {
+                    --transition-offset: calc(var(--transition-offset-stagger) * 3);
+
+                    top: var(--mob-3-top);
+                    left: var(--mob-3-left);
+                    opacity: var(--mob-3-opacity);
+
+                    div.tower-stats-upcoming-mob-image-wrapper {
+                        width: var(--mob-3-width);
+                        height: var(--mob-3-height);
+                    }
+                }
+            }
+
+            &#tower-stats-upcoming-mob-5 {
+                top: var(--mob-5-top);
+                left: var(--mob-5-left);
+                opacity: var(--mob-5-opacity);
+
+                div.tower-stats-upcoming-mob-image-wrapper {
+                    width: var(--mob-5-width);
+                    height: var(--mob-5-height);
+                }
+
+                &.moving-forward {
+                    --transition-offset: calc(var(--transition-offset-stagger) * 4);
+
+                    top: var(--mob-4-top);
+                    left: var(--mob-4-left);
+                    opacity: var(--mob-4-opacity);
+
+                    div.tower-stats-upcoming-mob-image-wrapper {
+                        width: var(--mob-4-width);
+                        height: var(--mob-4-height);
+                    }
+                }
+            }
+        }
+        div[class*="tower_tuiMobPortrait"]
+        div[class*="tower_portraitImageContainer"]
+        img[class*="tower_portraitImage"]
+        .tower-stats-enemy-image-clone {
+            filter: grayscale(100%);
+        }
+        @keyframes adjust-masks {
+            0% {
+                mask-size: 100% 0px, 100% calc(100% - var(--mask-height)), 100% var(--mask-height);
+                -webkit-mask-size: 100% 0px, 100% calc(100% - var(--mask-height)), 100% var(--mask-height);
+                mask-position: top center, center 0px, bottom center;
+                -webkit-mask-position: top center, center 0px, bottom center;
+            }
+            10% , 90% {
+                mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height) - var(--mask-height)), 100% var(--mask-height);
+                -webkit-mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height) - var(--mask-height)), 100% var(--mask-height);
+                mask-position: top center, center var(--mask-height), bottom center;
+                -webkit-mask-position: top center, center var(--mask-height), bottom center;
+            }
+            100% {
+                mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height)), 100% 0px;
+                -webkit-mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height)), 100% 0px;
+                mask-position: top center, center var(--mask-height), bottom center;
+                -webkit-mask-position: top center, center var(--mask-height), bottom center;
+            }
+        }
+    `;
 
     // keep data between runs
     const CACHE = {
@@ -761,6 +1419,10 @@
     // show the next five enemies
     const update_upcoming_mobs = () => {
         if (CACHE.get('upcoming_mobs') !== upcoming_mobs) return;
+        if (!CACHE.get('user_options')?.['congo']) {
+            clear_upcoming_mobs();
+            return;
+        }
         const state = CACHE.get('state');
         const parent = document.querySelector('div[class^="tower_tuiMobPortrait__"], div[class*=" tower_tuiMobPortrait__"]');
         const tilekey = get_tile_key(state?.['coordinates']);
@@ -866,6 +1528,11 @@
     };
 
     const update_mob_queue_css_variables = () => {
+        const tower = document.querySelector('div[class^="tower_towerGameplay"], div[class*=" tower_towerGameplay"]');
+        if (tower === null) {
+            mob_queue_info_hide();
+            return;
+        }
         const stats = document.querySelector('#tower-stats');
         if (stats === null) return;
 
@@ -876,11 +1543,184 @@
         const main = document.querySelector('main[class^="Layout_main"], main[class*=" Layout_main"]');
         if (main === null) return;
 
-        const { top, left } = main.getBoundingClientRect();
+        const { top, left, right, bottom } = main.getBoundingClientRect();
+        stats.style.setProperty('--top', `${Math.floor(top)}px`);
+        stats.style.setProperty('--left', `${Math.floor(left)}px`);
 
-        stats.style.setProperty('--top', `${top}px`);
-        stats.style.setProperty('--left', `${left}px`);
+        const options = document.getElementById('tower-options');
+        if (options !== null) {
+            options.style.display = getComputedStyle(stats).display === 'none' ? 'none' : 'flex';
+            options.style.setProperty('--top', `${Math.floor(top)}px`);
+            options.style.setProperty('--right', `${Math.floor(document.documentElement.clientWidth - right)}px`);
+        }
     }
+
+    const scroll_interceptor = function() {
+        const enabled = CACHE.get('user_options')?.['scrolling'];
+        if (!enabled) {
+            return CACHE.get('native_scroll').apply(this, arguments);
+        }
+        const stack = (new Error()).stack ?? '';
+        const tower_stack = stack
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.includes('_next') && line.includes('pages/tower'))
+            .join('')
+            .trim();
+        if (tower_stack.length === 0) {
+            // not a tower initated scroll
+            return CACHE.get('native_scroll').apply(this, arguments);
+        }
+    }
+
+    const setup_user_options = () => {
+        let options = CACHE.get('user_options');
+        if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+            options = {};
+            CACHE.set('user_options', options);
+        }
+        for (const [key, value] of Object.entries({ scrolling: false, congo: true, foreverloot: false })) {
+            if (typeof options[key] !== 'boolean') options[key] = value;
+        }
+
+        if (CACHE.get('native_scroll') === null) {
+            CACHE.set('native_scroll', window.scrollTo);
+            window.scrollTo = scroll_interceptor;
+        }
+    }
+
+    const TOWER_OPTION_TYPES = {
+        CHECKBOX: 'checkbox',
+        TEXT: 'text',
+        SELECT: 'select',
+        MULTISELECT: 'multiselect',
+    };
+
+    const create_tower_options = () => {
+        const option = (label, key, type, callback) => ({enabled: false, label, key, type, callback});
+        const set_value = (key, value) => {
+            CACHE.get('user_options')[key] = value;
+            localstorage_save();
+            update_mob_queue_css_variables();
+        };
+        const get_value = key => CACHE.get('user_options')[key];
+
+        let currently_expanded = false;
+
+        const available = [
+            option('Disable automatic scrolling', 'scrolling', TOWER_OPTION_TYPES.CHECKBOX, set_value),
+            option('Queue of enemies behind door', 'congo', TOWER_OPTION_TYPES.CHECKBOX, set_value),
+            option('Persist loot between sessions', 'foreverloot', TOWER_OPTION_TYPES.CHECKBOX, set_value),
+        ];
+
+        const options = document.createElement('div');
+        options.id = 'tower-options';
+
+        const expand = document.createElement('div');
+        expand.id = 'tower-options-expand';
+        expand.innerHTML = 'Options <span>[+]</span>';
+
+        expand.onclick = () => {
+            currently_expanded = !currently_expanded;
+            expand.querySelector('span').textContent = currently_expanded ? '[-]' : '[+]';
+            wrapper.classList.toggle('expanded', currently_expanded);
+            update_mob_queue_css_variables();
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'tower-option-list-wrapper';
+
+        const list = document.createElement('div');
+        list.id = 'tower-option-list';
+
+        for (const index in available) {
+            const selection = available[index];
+            const item = document.createElement('div');
+            item.id = `tower-option-list-item-${index}`;
+            item.classList.add('tower-option-list-item');
+
+            const input = document.createElement('input');
+            input.classList.add('tower-option-list-item-input');
+            switch(selection.type) {
+                case TOWER_OPTION_TYPES.CHECKBOX:
+                    input.type = 'checkbox';
+                    input.id = `tower-option-list-item-${index}-input-checkbox`;
+                    input.classList.add('tower-option-list-item-input-checkbox');
+                    input.name = selection.key;
+                    input.checked = get_value(selection.key);
+                    input.onchange = evt => selection.callback(selection.key, evt.target.checked);
+                    break;
+                case TOWER_OPTION_TYPES.MULTISELECT:
+                    // eventually
+                    break;
+                case TOWER_OPTION_TYPES.SELECT:
+                    // eventually
+                    break;
+                case TOWER_OPTION_TYPES.TEXT:
+                    // eventually
+                    break;
+                default:
+                    // unknown option
+                    break;
+            }
+            item.appendChild(input);
+            
+            const label = document.createElement('label');
+            label.id = `tower-option-list-item-${index}-label`;
+            label.classList.add('tower-option-list-item-label');
+            label.textContent = selection.label;
+            label.htmlFor = input.id;
+            item.appendChild(label);
+            
+            list.appendChild(item);
+        }
+
+        options.appendChild(expand);
+        wrapper.appendChild(list);
+        options.appendChild(wrapper);
+        document.body.appendChild(options);
+    };
+
+    const create_tower_stats = () => {
+        const stats = document.createElement('div');
+        stats.id = 'tower-stats';
+
+        const title = document.createElement('div');
+        title.id = 'tower-stats-title';
+        title.textContent = 'Loading...';
+
+        const subtitle = document.createElement('div');
+        subtitle.id = 'tower-stats-subtitle';
+        subtitle.textContent = 'Loading...';
+
+        const queue = document.createElement('div');
+        queue.id = 'tower-stats-queue';
+
+        const lower = document.createElement('div');
+        lower.id = 'tower-stats-title-lower';
+        lower.textContent = 'Loading...';
+
+        const slain = document.createElement('div');
+        slain.id = 'tower-stats-slain';
+        slain.textContent = 'Loading...';
+
+        const loot = document.createElement('div');
+        loot.id = 'tower-stats-loot';
+        loot.textContent = 'Loading...';
+
+        const looted = document.createElement('div');
+        looted.id = 'tower-stats-loot-list';
+
+        stats.appendChild(title);
+        stats.appendChild(subtitle);
+        stats.appendChild(queue);
+        stats.appendChild(lower);
+        stats.appendChild(slain);
+        stats.appendChild(loot);
+        stats.appendChild(looted);
+
+        document.body.appendChild(stats);
+    };
 
     let mob_queue_style_ready = false;
 
@@ -888,583 +1728,17 @@
         if (!mob_queue_style_ready) {
             const style = document.getElementById('tower-stats-style') ?? document.createElement('style');
             style.id = 'tower-stats-style';
-            style.textContent = `
-                #tower-stats {
-                    --top: 0px;
-                    --left: 0px;
-                    width: 240px;
-                    position: fixed;
-                    margin: 0;
-                    padding: 0;
-                    margin-top: 8px;
-                    margin-left: 8px;
-                    top: var(--top);
-                    left: var(--left);
-                    display: none;
-                    overflow: visible;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 4px;
-
-                    filter: 
-                        drop-shadow(2px 0px 0px var(--surface-bg))
-                        drop-shadow(-2px 0px 0px var(--surface-bg))
-                        drop-shadow(0px 2px 0px var(--surface-bg))
-                        drop-shadow(0px -2px 0px var(--surface-bg))
-                        drop-shadow(1px 1px 1px var(--surface-bg))
-                        drop-shadow(1px 1px 2px color-mix(in srgb, var(--text) 15%, transparent));
-
-                    z-index: 999999;
-                }
-                #tower-stats-title, #tower-stats-title-lower {
-                    font-family: NDS BIOS,sans-serif;
-                    color: var(--text);
-                    font-size: 24px;
-                    margin: 0;
-                    padding: 0;
-                    line-height: 24px;
-                }
-                #tower-stats-subtitle, #tower-stats-slain, #tower-stats-loot {
-                    font-family: NDS BIOS, sans-serif;
-                    color: var(--text);
-                    font-size: 16px;
-                    margin: 0;
-                    padding: 0;
-                    line-height: 16px;
-                    width: 100%;
-                    text-align: center;
-
-                    &#tower-stats-slain, &#tower-stats-loot {
-                        width: 90%;
-                        text-align: left;
-                    }
-                }
-                #tower-stats-queue, #tower-stats-loot-list {
-                    --mask-height: 100px;
-                    mask-image:
-                        linear-gradient(to bottom, transparent, black),
-                        linear-gradient(to bottom, black, black),
-                        linear-gradient(to bottom, black, transparent);
-                    mask-repeat: no-repeat, no-repeat, no-repeat;
-                    mask-size: 100% 0px, 100% 100%, 100% 0px;
-                    mask-position: top center, center 0px, bottom center;
-
-                    -webkit-mask-image:
-                        linear-gradient(to bottom, transparent, black),
-                        linear-gradient(to bottom, black, black),
-                        linear-gradient(to bottom, black, transparent);
-                    -webkit-mask-repeat: no-repeat, no-repeat, no-repeat;
-                    -webkit-mask-size: 100% 0px, 100% 100%, 100% 0px;
-                    -webkit-mask-position: top center, center 0px, bottom center;
-
-                    animation: adjust-masks 1s linear both paused;
-                }
-                #tower-stats-queue {
-                    margin: 0;
-                    padding: 0;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    width: 100%;
-                    height: calc(280px - 8px - 24px);
-                    gap: 0px;
-
-                    --scrollbar-handle-r: calc((255 + 249)/2);
-                    --scrollbar-handle-g: calc((229 + 165)/2);
-                    --scrollbar-handle-b: calc((0 + 0)/2);
-
-                    --scrollbar-base-r: 255;
-                    --scrollbar-base-g: 0;
-                    --scrollbar-base-b: 88;
-
-                    overflow-y: scroll;
-                    scrollbar-width: thin;
-                    scrollbar-color: 
-                        rgba(var(--scrollbar-handle-r), var(--scrollbar-handle-g), var(--scrollbar-handle-b), 0.75)
-                        rgba(var(--scrollbar-base-r), var(--scrollbar-base-g), var(--scrollbar-base-b), 0.525);
-
-                    /* put scrollbar on left side */
-
-                    direction: rtl;
-                    * {
-                        direction: ltr;
-                    }
-
-                    div.tower-stats-enemy {
-                        display: flex;
-                        margin: 0;
-                        padding: 0;
-                        flex-direction: row;
-                        flex-wrap: nowrap;
-                        align-items: center;
-                        justify-content: space-evenly;
-                        gap: 0px;
-
-                        width: 100%;
-                        
-                        div {
-                            font-family: NDS BIOS,sans-serif;
-                            color: var(--text);
-                            font-size: 16px;
-                            line-height: 16px;
-                        }
-
-                        div.tower-stats-enemy-index {
-                            min-width: 38px;
-                            max-width: 38px;
-                            text-align: center;
-                        }
-
-                        div.tower-stats-enemy-image {
-                            position: relative;
-                            max-width: 32px;
-                            max-height: 32px;
-                            background-size: contain;
-                            background-repeat: no-repeat;
-                            background-position: center center;
-                            min-width: 32px;
-                            min-height: 32px;
-                            image-rendering: auto;
-
-                            &.tower-stats-enemy-image-clone::before {
-                                content: "";
-                                position: absolute;
-                                top: 0px;
-                                left: 0px;
-                                width: 100%;
-                                height: 100%;
-                                
-                                background-image: inherit; 
-                                background-size: contain;
-                                background-repeat: no-repeat;
-                                background-position: center center;
-
-                                filter: grayscale(100%); 
-                            }
-
-                            &.tower-stats-enemy-image-clone::after {
-                                content: "";
-                                position: absolute;
-                                top: 1px;
-                                left: -3px;
-                                width: 50%;
-                                height: 50%;
-
-                                --emerald-glow: rgba(164, 255, 104, 0.5);
-                                --outline-size: 1px;
-                                
-                                background-image: url('/img/items/weapons/Weapon_Plasma_Ranged.png');
-                                background-size: contain;
-                                background-repeat: no-repeat;
-                                background-position: center center;
-                                
-                                opacity: 1.0;
-
-                                filter:
-                                    drop-shadow(calc(var(--outline-size) * 1.0) 0px 0px var(--emerald-glow))
-                                    drop-shadow(calc(var(--outline-size) * -1.0) 0px 0px var(--emerald-glow))
-                                    drop-shadow(0px calc(var(--outline-size) * 1.0) 0px var(--emerald-glow))
-                                    drop-shadow(0px calc(var(--outline-size) * -1.0) 0px var(--emerald-glow));
-                            }
-                        }
-
-                        div.tower-stats-enemy-stacked-info {
-                            display: flex;
-                            margin: 0;
-                            padding: 0;
-                            flex-direction: column;
-                            align-items: center;
-                            gap: 0px;
-                            width: 146px;
-
-                            div.tower-stats-enemy-name-wrapper {
-                                display: flex;
-                                margin: 0;
-                                padding: 0;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 0px;
-                                height: 16px;
-
-                                div.tower-stats-enemy-name {
-                                    text-align: center;
-                                }
-                            }
-
-                            div.tower-stats-enemy-hp-wrapper {
-                                --full-width: 120px;
-                                --full-height: 20px;
-                                --bar-scalar: 0.90;
-                                --current-percentage: 100%;
-
-                                display: flex;
-                                margin: 0;
-                                padding: 0;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 0px;
-                                width: var(--full-width);
-                                height: var(--full-height);
-
-                                image-rendering: auto;
-
-                                background-image: 
-                                    url('/img/tower/tower_ui_lifebar.png'),
-                                    url('/img/tower/tower_ui_lifebar_bg.png');
-                                background-size:
-                                    var(--full-width) var(--full-height),
-                                    calc(var(--current-percentage) * var(--bar-scalar)) 95%;
-                                background-position:
-                                    center center,
-                                    left center;
-                                background-repeat:
-                                    no-repeat,
-                                    no-repeat;
-                                
-                                background-position-x: 
-                                    0px,
-                                    calc((var(--full-width) - (var(--full-width) * var(--bar-scalar))) / 2);
-
-                                div.tower-stats-enemy-hp {
-                                    text-align: center;
-                                    font-size: 14px;
-                                    line-height: 16px;
-                                    position: relative;
-                                    top: -1px;
-                                }
-                            }
-
-                        }
-                    }
-                }
-                #tower-stats-loot-list {
-                    --mask-height: 24px;
-                    --internal-offset: 0.01;
-                    --base-width: 216px;
-                    --cut-sides: calc(var(--base-width) - (var(--base-width) * var(--internal-offset)));
-                    --width: round(down, var(--cut-sides), 1px);
-                    --left: round(up, calc((var(--base-width) - var(--width)) / 2), 1px);
-
-                    --scrollbar-handle-r: calc((255 + 249)/2);
-                    --scrollbar-handle-g: calc((229 + 165)/2);
-                    --scrollbar-handle-b: calc((0 + 0)/2);
-                    --scrollbar-base-r: 255;
-                    --scrollbar-base-g: 0;
-                    --scrollbar-base-b: 88;
-
-                    display: flex;
-                    flex-direction: column;
-                    margin: 0;
-                    padding: 0;
-
-                    overflow-y: scroll;
-                    scrollbar-width: thin;
-                    scrollbar-color: rgba(var(--scrollbar-handle-r), var(--scrollbar-handle-g), var(--scrollbar-handle-b), 0.75) rgba(var(--scrollbar-base-r), var(--scrollbar-base-g), var(--scrollbar-base-b), 0.525);
-
-                    position: relative;
-                    width: var(--width);
-                    left: var(--left);
-                    max-height: 110px;
-                    min-height: 110px;
-                    padding-left: 8px;
-
-                    /* put scrollbar on left side */
-
-                    direction: rtl;
-                    * {
-                        direction: ltr;
-                    }
-
-                    div.tower-stats-loot-list-item {
-                        display: flex;
-                        flex-direction: row;
-                        justify-content: flex-start;
-                        align-items: center;
-                        gap: 6px;
-                        margin: 0;
-                        padding: 0;
-
-                        div.tower-stats-loot-list-item-image {
-                            min-height: 20px;
-                            min-width: 20px;
-                            max-width: 20px;
-                            max-height: 20px;
-                            background-size: contain;
-                            background-repeat: no-repeat;
-                            background-position: center center;
-                            image-rendering: auto;
-                        }
-
-                        div.tower-stats-loot-list-item-name {
-                            font-size: 16px;
-                        }
-                    }
-                }
-                div.tower-stats-upcoming-mob {
-                    overflow: visible;
-                    pointer-events: none;
-                    position: relative;
-                    display: block;
-                    width: 0px;
-                    height: 0px;
-
-                    padding: 0;
-                    margin: 0;
-                    margin-top: -10px; /* offsets gap in parent flexbox */
-
-                    --mob-base-top: 55px;
-                    --mob-base-left: -110px;
-                    --mob-base-opacity: 0.0;
-                    --mob-base-width: 218px;
-                    --mob-base-height: 218px;
-
-                    --mob-1-top: 64px;
-                    --mob-1-left: 26px;
-                    --mob-1-opacity: 0.8;
-                    --mob-1-width: 200px;
-                    --mob-1-height: 200px;
-
-                    --mob-2-top: 50px;
-                    --mob-2-left: 100px;
-                    --mob-2-opacity: 0.6;
-                    --mob-2-width: 174px;
-                    --mob-2-height: 174px;
-
-                    --mob-3-top: 40px;
-                    --mob-3-left: 150px;
-                    --mob-3-opacity: 0.4;
-                    --mob-3-width: 160px;
-                    --mob-3-height: 160px;
-
-                    --mob-4-top: 30px;
-                    --mob-4-left: 190px;
-                    --mob-4-opacity: 0.2;
-                    --mob-4-width: 150px;
-                    --mob-4-height: 150px;
-
-                    --mob-5-top: 10px;
-                    --mob-5-left: 220px;
-                    --mob-5-opacity: 0.0;
-                    --mob-5-width: 140px;
-                    --mob-5-height: 140px;
-
-                    --transition-time: 0.0s;
-                    --transition-offset: 0.0s;
-                    --transition-offset-stagger: 0.25s;
-
-                    transition: 
-                        top var(--transition-time) ease-in-out var(--transition-offset),
-                        left var(--transition-time) ease-in-out var(--transition-offset),
-                        opacity var(--transition-time) ease-in-out var(--transition-offset);
-
-                    div.tower-stats-upcoming-mob-image-wrapper {
-                        background-repeat: no-repeat;
-                        background-position: center center;
-                        background-size: contain;
-
-                        transition: 
-                            width var(--transition-time) ease-in-out var(--transition-offset),
-                            height var(--transition-time) ease-in-out var(--transition-offset);
-
-                        &.clone {
-                            filter: grayscale(100%);
-                        }
-                    }
-
-                    &.moving-forward {
-                        --transition-time: 0.5s;
-                    }
-
-                    &#tower-stats-upcoming-mob-1 {
-                        top: var(--mob-1-top);
-                        left: var(--mob-1-left);
-                        opacity: var(--mob-1-opacity);
-
-                        div.tower-stats-upcoming-mob-image-wrapper {
-                            width: var(--mob-1-width);
-                            height: var(--mob-1-height);
-                        }
-
-                        &.moving-forward {
-                            top: var(--mob-base-top);
-                            left: var(--mob-base-left);
-                            opacity: var(--mob-base-opacity);
-
-                            div.tower-stats-upcoming-mob-image-wrapper {
-                                width: var(--mob-base-width);
-                                height: var(--mob-base-height);
-                            }
-                        }
-                    }
-
-                    &#tower-stats-upcoming-mob-2 {
-                        top: var(--mob-2-top);
-                        left: var(--mob-2-left);
-                        opacity: var(--mob-2-opacity);
-
-                        div.tower-stats-upcoming-mob-image-wrapper {
-                            width: var(--mob-2-width);
-                            height: var(--mob-2-height);
-                        }
-
-                        &.moving-forward {
-                            --transition-offset: calc(var(--transition-offset-stagger) * 1);
-
-                            top: var(--mob-1-top);
-                            left: var(--mob-1-left);
-                            opacity: var(--mob-1-opacity);
-
-                            div.tower-stats-upcoming-mob-image-wrapper {
-                                width: var(--mob-1-width);
-                                height: var(--mob-1-height);
-                            }
-                        }
-                    }
-
-                    &#tower-stats-upcoming-mob-3 {
-                        top: var(--mob-3-top);
-                        left: var(--mob-3-left);
-                        opacity: var(--mob-3-opacity);
-
-                        div.tower-stats-upcoming-mob-image-wrapper {
-                            width: var(--mob-3-width);
-                            height: var(--mob-3-height);
-                        }
-
-                        &.moving-forward {
-                            --transition-offset: calc(var(--transition-offset-stagger) * 2);
-
-                            top: var(--mob-2-top);
-                            left: var(--mob-2-left);
-                            opacity: var(--mob-2-opacity);
-
-                            div.tower-stats-upcoming-mob-image-wrapper {
-                                width: var(--mob-2-width);
-                                height: var(--mob-2-height);
-                            }
-                        }
-                    }
-
-                    &#tower-stats-upcoming-mob-4 {
-                        top: var(--mob-4-top);
-                        left: var(--mob-4-left);
-                        opacity: var(--mob-4-opacity);
-
-                        div.tower-stats-upcoming-mob-image-wrapper {
-                            width: var(--mob-4-width);
-                            height: var(--mob-4-height);
-                        }
-
-                        &.moving-forward {
-                            --transition-offset: calc(var(--transition-offset-stagger) * 3);
-
-                            top: var(--mob-3-top);
-                            left: var(--mob-3-left);
-                            opacity: var(--mob-3-opacity);
-
-                            div.tower-stats-upcoming-mob-image-wrapper {
-                                width: var(--mob-3-width);
-                                height: var(--mob-3-height);
-                            }
-                        }
-                    }
-
-                    &#tower-stats-upcoming-mob-5 {
-                        top: var(--mob-5-top);
-                        left: var(--mob-5-left);
-                        opacity: var(--mob-5-opacity);
-
-                        div.tower-stats-upcoming-mob-image-wrapper {
-                            width: var(--mob-5-width);
-                            height: var(--mob-5-height);
-                        }
-
-                        &.moving-forward {
-                            --transition-offset: calc(var(--transition-offset-stagger) * 4);
-
-                            top: var(--mob-4-top);
-                            left: var(--mob-4-left);
-                            opacity: var(--mob-4-opacity);
-
-                            div.tower-stats-upcoming-mob-image-wrapper {
-                                width: var(--mob-4-width);
-                                height: var(--mob-4-height);
-                            }
-                        }
-                    }
-                }
-                div[class*="tower_tuiMobPortrait"]
-                div[class*="tower_portraitImageContainer"]
-                img[class*="tower_portraitImage"]
-                .tower-stats-enemy-image-clone {
-                    filter: grayscale(100%);
-                }
-                @keyframes adjust-masks {
-                    0% {
-                        mask-size: 100% 0px, 100% calc(100% - var(--mask-height)), 100% var(--mask-height);
-                        -webkit-mask-size: 100% 0px, 100% calc(100% - var(--mask-height)), 100% var(--mask-height);
-                        mask-position: top center, center 0px, bottom center;
-                        -webkit-mask-position: top center, center 0px, bottom center;
-                    }
-                    10% , 90% {
-                        mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height) - var(--mask-height)), 100% var(--mask-height);
-                        -webkit-mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height) - var(--mask-height)), 100% var(--mask-height);
-                        mask-position: top center, center var(--mask-height), bottom center;
-                        -webkit-mask-position: top center, center var(--mask-height), bottom center;
-                    }
-                    100% {
-                        mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height)), 100% 0px;
-                        -webkit-mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height)), 100% 0px;
-                        mask-position: top center, center var(--mask-height), bottom center;
-                        -webkit-mask-position: top center, center var(--mask-height), bottom center;
-                    }
-                }
-            `;
+            style.textContent = TOWER_STYLE;
             document.head.appendChild(style);
             mob_queue_style_ready = true;
         }
 
         if (document.body.querySelector('#tower-stats') === null) {
-            const stats = document.createElement('div');
-            stats.id = 'tower-stats';
+            create_tower_stats();
+        }
 
-            const title = document.createElement('div');
-            title.id = 'tower-stats-title';
-            title.textContent = 'Loading...';
-
-            const subtitle = document.createElement('div');
-            subtitle.id = 'tower-stats-subtitle';
-            subtitle.textContent = 'Loading...';
-
-            const queue = document.createElement('div');
-            queue.id = 'tower-stats-queue';
-
-            const lower = document.createElement('div');
-            lower.id = 'tower-stats-title-lower';
-            lower.textContent = 'Loading...';
-
-            const slain = document.createElement('div');
-            slain.id = 'tower-stats-slain';
-            slain.textContent = 'Loading...';
-
-            const loot = document.createElement('div');
-            loot.id = 'tower-stats-loot';
-            loot.textContent = 'Loading...';
-
-            const looted = document.createElement('div');
-            looted.id = 'tower-stats-loot-list';
-
-            stats.appendChild(title);
-            stats.appendChild(subtitle);
-            stats.appendChild(queue);
-            stats.appendChild(lower);
-            stats.appendChild(slain);
-            stats.appendChild(loot);
-            stats.appendChild(looted);
-
-            document.body.appendChild(stats);
+        if (document.body.querySelector('#tower-options') === null) {
+            create_tower_options();
         }
 
         const queue = document.getElementById('tower-stats-queue');
@@ -1722,7 +1996,7 @@
         }
         const session = get_session_stats();
         session.slain = 0;
-        session.loot.length = 0;
+        if (!CACHE.get('user_options')?.['foreverloot']) session.loot.length = 0;
         localstorage_save();
         console.info('Tower tracking cleared.');
     };
@@ -1764,6 +2038,8 @@
     }
 
 
+    document.getElementById('tower-options')?.remove(); // if loading script again
+
     CACHE.set('initalized', false);
     patch_console_logging();
 
@@ -1771,6 +2047,7 @@
 
     setup_action_tracking();
     localstorage_restore();
+    setup_user_options();
     setup_enemy_queue();
     get_session_stats();
 
