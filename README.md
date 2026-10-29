@@ -4,8 +4,16 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 **NEW 10/24/2026**<BR />
 You can additionally add keyboard controls by following the install instructions below but for [KEYBOARD-CONTROLS.js](KEYBOARD-CONTROLS.js)
 
+**NEW 10/28/2026**<BR />
+New options menu added in commit [`8d8e8c5`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/8d8e8c5b4f8207a6f5d9d77bb9ed8758710f9897)!
+- Clear loot between sessions enable/disable
+- Congo line enable/disable
+- Automatic scrolling enable/disable
+<img width="360" height="158" alt="image" src="https://github.com/user-attachments/assets/2504cb85-8220-4e81-9298-e9e42c2805a9" />
+
+
 <!-- https://docs-md.com/markdown-toc-generator -->
-### Table of Contents
+## Table of Contents
 - [Cute Splash Image](#cute-splash-image)
 - [Current Possible Bugs](#current-possible-bugs)
 - [To-Do](#to-do)
@@ -35,11 +43,13 @@ If you find this tool useful, and you have an hourglass fish to spare... `H2N7E5
 - Knowing when Dogmatic Seal is or isn't equipped
 - Extend scythe overlay graphic to other non-standard spawn types (ex. beeper, reaper, hot pot, trickster donut, etc)
 - Add pop up warning if you try to start a run with gold boot + a weapon equipped
-- Congo line toggle
+- ~~Congo line toggle~~
+  - Addressed in commit [`8d8e8c5`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/8d8e8c5b4f8207a6f5d9d77bb9ed8758710f9897) <sub><i>features update</i></sub>
 - Frisbee Tracker
-- Persist Loot Option Between Dives
-- Detect if No Longer In Tower (But Floor isn’t Clear, eg suspended)
-
+- ~~Persist Loot Option Between Dives~~
+  - Addressed in commit [`8d8e8c5`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/8d8e8c5b4f8207a6f5d9d77bb9ed8758710f9897) <sub><i>features update</i></sub>
+- ~~Detect if No Longer In Tower (But Floor isn’t Clear, eg suspended)~~
+  - Addressed in commit [`8d8e8c5`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/8d8e8c5b4f8207a6f5d9d77bb9ed8758710f9897) <sub><i>features update</i></sub>
 
 ## Using
 
