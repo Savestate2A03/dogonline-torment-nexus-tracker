@@ -186,7 +186,8 @@
                 box-sizing: border-box;
             }
 
-            div.section.removed {
+            div.section.removed,
+            div.section.section-hidden {
                 display: none;
             }
         }
@@ -209,6 +210,7 @@
 
         main#secondary {
             --removed-items-max-height: calc(100dvh - 85px);
+            --removed-items-bottom: 16px;
             position: fixed;
             bottom: -200px;
             right: 16px;
@@ -257,6 +259,59 @@
                 box-shadow: 2px 2px 1px var(--color-shadow);
             }
 
+            #section-removed-sections {
+                display: none;
+                position: fixed;
+                right: 16px;
+                bottom: 16px;
+                width: 290px;
+                margin: 0;
+                padding-left: 20px;
+                padding-right: 20px;
+                flex-direction: column;
+                flex-wrap: nowrap;
+                align-items: center;
+                gap: 0;
+                overflow: visible;
+
+                * {
+                    box-sizing: border-box;
+                }
+
+                &>.title {
+                    flex: 0 0 auto;
+                }
+            }
+
+            #removed-sections-list {
+                width: 100%;
+                overflow: visible;
+            }
+
+            .section-in-removed-list-wrapper {
+                display: flex;
+                gap: 8px;
+                min-height: 20px;
+            }
+
+            .section-in-removed-list-undo-button {
+                padding: 0;
+                border: 0;
+                background: none;
+                color: inherit;
+                font: inherit;
+                cursor: pointer;
+
+                * {
+                    box-sizing: border-box;
+                }
+
+                &:hover {
+                    color: var(--color-danger);
+                }
+            }
+
+
             div.section#section-removed-items {
                 display: flex;
                 flex-direction: column;
@@ -269,6 +324,7 @@
                 gap: 0;
                 min-height: min(100px, var(--removed-items-max-height));
                 max-height: var(--removed-items-max-height);
+                overflow: hidden;
                 transition: bottom 0.5s ease-in-out;
 
                 position: fixed;
@@ -279,7 +335,8 @@
                     box-sizing: border-box;
                 }
 
-                > div.title, > div.message {
+                >div.title,
+                >div.message {
                     flex: 0 0 auto;
                 }
 
@@ -327,6 +384,37 @@
                     }
                 }
 
+            }
+        }
+
+        main#main>div.section {
+            position: relative;
+        }
+
+        main#main>div.section>.title {
+            padding-left: 32px;
+            padding-right: 32px;
+        }
+
+        .section-remove-button {
+            position: absolute;
+            top: 4px;
+            right: 9px;
+            padding: 0;
+            border: 0;
+            background: none;
+            color: var(--color-text);
+            font-family: 'NDS', monospace;
+            font-size: 24px;
+            line-height: 24px;
+            cursor: pointer;
+
+            * {
+                box-sizing: border-box;
+            }
+
+            &:hover {
+                color: var(--color-danger);
             }
         }
 
@@ -1506,8 +1594,8 @@
 
     <!-- IMPORTANT FOR FUTURE UPGRADES OF PREVIOUSLY STORED LOCALSTORAGE DATA -->
     <script>
-        const CURRENT_DOGDATA_VERSION = 'v1.0.1';
-        const ALL_DOGDATA_VERSIONS = Object.freeze(['v1.0.0', 'v1.0.1', /* 'v1.0.2', 'v2.0.0', 'v2.0.0-hotfix', etc */]);
+        const CURRENT_DOGDATA_VERSION = 'v1.0.2';
+        const ALL_DOGDATA_VERSIONS = Object.freeze(['v1.0.0', 'v1.0.1', 'v1.0.2', /* 'v2.0.0', 'v2.0.0-hotfix', etc */]);
         const DOGDATA_LOCALSTORAGE_KEY = 'DOGDATA';
 
         const ATTRIBUTE_DEFAULTS = value => ({
@@ -1520,14 +1608,21 @@
         // mostly placeholders until this actually happens...
         // important: make all modifications to dogdata in place!
         const UPGRADE_PATHS = {
-            v1_0_0__to__v_1_0_1: dogdata => {
-                // local testing...
-                Object.defineProperty(dogdata, 'removed', ATTRIBUTE_DEFAULTS(dogdata.items));
+            v1_0_0__to__v1_0_1: dogdata => {
+                // keep older removed items
+                Object.defineProperty(dogdata, 'removed', ATTRIBUTE_DEFAULTS(
+                    Array.isArray(dogdata.removed) ? dogdata.removed : Array.isArray(dogdata.items) ? dogdata.items : []
+                ));
                 delete dogdata.items;
                 dogdata.version = 'v1.0.1';
-                dogdata.last_updated = Date.now();
-                // this should be done every time
-                dogdata.encoded_base64_data = '';
+            },
+
+            v1_0_1__to__v1_0_2: dogdata => {
+                // start with sections visible
+                if (!Array.isArray(dogdata.removed_sections)) {
+                    Object.defineProperty(dogdata, 'removed_sections', ATTRIBUTE_DEFAULTS([]));
+                }
+                dogdata.version = 'v1.0.2';
             },
 
             // -----------------------------------
@@ -1535,21 +1630,14 @@
             // and only exist for templating atm..
             // -----------------------------------
 
-            v1_0_1__to__v_1_0_2: dogdata => {
-                /* do stuff */
-                dogdata.version = 'v1.0.2';
-                dogdata.last_updated = Date.now();
-                // this should be done every time
-                dogdata.encoded_base64_data = '';
-            },
-            v1_0_2__to__v_2_0_0: dogdata => {
+            v1_0_2__to__v2_0_0: dogdata => {
                 /* do stuff */
                 dogdata.version = 'v2.0.0';
                 dogdata.last_updated = Date.now();
                 // this should be done every time
                 dogdata.encoded_base64_data = '';
             },
-            v2_0_0__to__v_2_0_0_hotfix: dogdata => {
+            v2_0_0__to__v2_0_0_hotfix: dogdata => {
                 /* do stuff */
                 dogdata.version = 'v2.0.0-hotfix';
                 dogdata.last_updated = Date.now();
@@ -1648,6 +1736,7 @@
                 height: `${element.offsetHeight}px`,
             });
             clone.querySelector('#screenshot-button')?.remove();
+            clone.querySelectorAll('.section-remove-button').forEach(button => button.remove());
 
             const font_rules = [];
             const collect_fonts = rules => {
@@ -1891,24 +1980,24 @@
         };
 
         function upgrade_dogdata(dogdata) {
-            const get_next_version = current => {
-                try {
-                    return ALL_DOGDATA_VERSIONS[(ALL_DOGDATA_VERSIONS.findIndex(current) + 1)];
-                } catch {
-                    return null;
+            const get_next_version = current => ALL_DOGDATA_VERSIONS[ALL_DOGDATA_VERSIONS.indexOf(current) + 1] ?? null;
+            const format_upgrade_path = version => version?.replace(/[.-]/g, '_').toLocaleLowerCase() ?? 'unknown_version_or_error';
+            const generate_next_upgrade_path_key = version => `${format_upgrade_path(version)}__to__${format_upgrade_path(get_next_version(version))}`;
+            const errors = [];
+            while (dogdata.version !== CURRENT_DOGDATA_VERSION) {
+                const next_version = get_next_version(dogdata.version);
+                const upgrade = UPGRADE_PATHS[generate_next_upgrade_path_key(dogdata.version)];
+                if (next_version === null || typeof upgrade !== 'function') {
+                    errors.push(`Missing upgrade path for ${dogdata.version}.`);
+                    return { finished: false, errors };
+                }
+                upgrade(dogdata);
+                if (dogdata.version !== next_version) {
+                    errors.push(`Upgrade did not reach ${next_version}.`);
+                    return { finished: false, errors };
                 }
             }
-
-            const format_upgrade_path = version => version?.replace('.', '_')?.replace('-', '_')?.simplify() ?? 'unknown_version_or_error';
-            const generate_next_upgrade_path_key = version => `${format_upgrade_path(version)}__to__${format_upgrade_path(get_next_version(version))}`;
-
-            const errors = [];
-
-            if (dogdata.version === CURRENT_DOGDATA_VERSION) return { finished: true, errors };
-
-            UPGRADE_PATHS[generate_next_upgrade_path_key(dogdata.version)]();
-
-            return upgrade_dogdata(dogdata);
+            return { finished: true, errors };
         }
 
         function print_localstorage_usage_amount() {
@@ -1990,6 +2079,7 @@
                 console.warn('No previous data found in localStorage, creating new entry!');
                 update_dogdata_in_localstorage({
                     removed: [],
+                    removed_sections: [],
                     last_updated: Date.now(),
                     version: CURRENT_DOGDATA_VERSION,
                     dimensions: { '--stuff-width': -1, '--stuff-height': -1 },
@@ -2006,12 +2096,20 @@
             }
 
             const { removed, last_updated, version } = dogdata;
+            let updated = false;
 
             if (version !== CURRENT_DOGDATA_VERSION) {
                 console.warn('Data in localStorage out of date! Upgrading...');
-                upgrade_dogdata(dogdata);
+                const result = upgrade_dogdata(dogdata);
+                if (!result.finished) throw new Error(result.errors.join('\n'));
+                updated = true;
                 console.warn(`Upgraded localStorage['${DOGDATA_LOCALSTORAGE_KEY}'] from '${version}' to '${CURRENT_DOGDATA_VERSION}'!`);
             }
+            if (!Array.isArray(dogdata.removed_sections)) {
+                dogdata.removed_sections = [];
+                updated = true;
+            }
+            if (updated) localStorage.setItem(DOGDATA_LOCALSTORAGE_KEY, JSON.stringify(dogdata));
 
             set_footer_text(dogdata.last_updated);
             return dogdata;
@@ -2031,7 +2129,10 @@
             const button = document.getElementById('screenshot-button');
             if (!secondary || !button) return;
             const maximum_bottom = Math.max(16, window.innerHeight - button.offsetHeight - 16);
-            secondary.style.setProperty('--removed-items-max-height', `${Math.max(0, maximum_bottom - 24)}px`);
+            const removed_sections = document.getElementById('section-removed-sections');
+            const sections_height = removed_sections && removed_sections.style.display !== 'none' ? removed_sections.offsetHeight + 8 : 0;
+            secondary.style.setProperty('--removed-items-bottom', `${16 + sections_height}px`);
+            secondary.style.setProperty('--removed-items-max-height', `${Math.max(0, maximum_bottom - 24 - sections_height)}px`);
             const dynamic_height_adjustment = 20 * Math.max(item_count ?? secondary.querySelectorAll('.item-in-removed-list-wrapper:not(.removing)').length, 1);
             if (time !== null) {
                 const state = SCREENSHOT_BUTTON_POSITION_STATE;
@@ -2058,8 +2159,8 @@
             }
             const distance_from_bottom = 80 + 16 + 8 + dynamic_height_adjustment - 8 + (REMOVED_ITEM_MESSAGE_STATE.showing ? 22 : 0);
             secondary.style.bottom = REMOVED_ITEMS_PENDING_MOVEMENT.currently_showing
-                ? `${Math.min(maximum_bottom, Math.max(126, distance_from_bottom))}px`
-                : '16px';
+                ? `${Math.min(maximum_bottom, sections_height + Math.max(126, distance_from_bottom))}px`
+                : `${Math.min(maximum_bottom, 16 + sections_height)}px`;
         }
 
         function show_removed_item_messages_from_queue() {
@@ -2239,7 +2340,7 @@
         }
 
         function get_removed_sections_with_items_in_removed_list() {
-            return [...document.querySelectorAll('#main > .section.removed')];
+            return [...document.querySelectorAll('#main > .section.removed:not(.section-hidden)')];
         }
 
         function get_panning_bounds(section_name = null) {
@@ -2641,7 +2742,7 @@
                     REMOVED_ITEMS_PENDING_MOVEMENT.base_movement_timeout = null;
                 }
                 REMOVED_ITEMS_PENDING_MOVEMENT.base_movement_timeout = setTimeout(() => {
-                    list.style.bottom = '16px';
+                    list.style.bottom = 'var(--removed-items-bottom)';
                     if (callback !== null && typeof callback === 'function') callback();
                     REMOVED_ITEMS_PENDING_MOVEMENT.base_movement_timeout = null;
                 }, 200);
@@ -2760,6 +2861,16 @@
                 title.classList.add('title');
                 element.appendChild(title);
                 title.innerText = section.charAt(0).toLocaleUpperCase() + section.substring(1).toLocaleLowerCase();
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'section-remove-button';
+                remove.textContent = '[x]';
+                remove.title = `Hide ${title.innerText}`;
+                remove.onclick = event => {
+                    event.stopPropagation();
+                    add_to_removed_sections_list(element.id);
+                };
+                element.appendChild(remove);
                 main.appendChild(element);
             });
 
@@ -2876,6 +2987,75 @@
             list.id = 'removed-items-list';
             section.appendChild(list);
             secondary.appendChild(section);
+        }
+
+        function create_removed_sections_list() {
+            const section = document.createElement('div');
+            section.id = 'section-removed-sections';
+            section.className = 'section';
+            section.style.display = 'none';
+            const title = document.createElement('div');
+            title.className = 'title';
+            title.textContent = 'Removed sections...';
+            const list = document.createElement('div');
+            list.id = 'removed-sections-list';
+            section.append(title, list);
+            const secondary = document.getElementById('secondary');
+            secondary.appendChild(section);
+            new ResizeObserver(() => {
+                if (secondary.style.bottom !== '') update_screenshot_button_position();
+            }).observe(section);
+        }
+
+        function update_removed_sections_list() {
+            const panel = document.getElementById('section-removed-sections');
+            const list = document.getElementById('removed-sections-list');
+            if (!panel || !list) return;
+            const dogdata = get_dogdata_from_localstorage();
+            const hidden = new Set(dogdata.removed_sections);
+            const main = document.getElementById('main');
+            for (const section of main.querySelectorAll(':scope > .section')) {
+                section.classList.toggle('section-hidden', hidden.has(section.id));
+            }
+            const rows = [];
+            for (const id of hidden) {
+                if (typeof id !== 'string') continue;
+                const section = document.getElementById(id);
+                const row = document.createElement('div');
+                row.className = 'section-in-removed-list-wrapper';
+                row.dataset.sectionid = id;
+                const undo = document.createElement('button');
+                undo.type = 'button';
+                undo.className = 'section-in-removed-list-undo-button';
+                undo.textContent = '[x]';
+                const name = document.createElement('div');
+                name.className = 'section-in-removed-list-name';
+                name.textContent = section?.querySelector('.title')?.textContent.trim() || id.replace(/^section-/, '');
+                undo.title = `Restore ${name.textContent}`;
+                undo.onclick = () => {
+                    const saved = get_dogdata_from_localstorage();
+                    saved.removed_sections = saved.removed_sections.filter(section_id => section_id !== id);
+                    update_dogdata_in_localstorage(saved);
+                    update_removed_sections_list();
+                };
+                row.append(undo, name);
+                rows.push(row);
+            }
+            list.replaceChildren(...rows);
+            panel.style.display = rows.length ? 'flex' : 'none';
+            if (rows.length || document.getElementById('secondary').style.bottom !== '') {
+                update_screenshot_button_position({ time: 305 });
+            }
+        }
+
+        function add_to_removed_sections_list(section_id) {
+            const section = document.getElementById(section_id);
+            if (!section || section.parentElement !== document.getElementById('main')) return;
+            const dogdata = get_dogdata_from_localstorage();
+            if (dogdata.removed_sections.includes(section_id)) return;
+            dogdata.removed_sections.push(section_id);
+            update_dogdata_in_localstorage(dogdata);
+            update_removed_sections_list();
         }
 
         function get_removed_items_from_local_storage() {
@@ -3436,14 +3616,16 @@
             window.scrollTo(0, 0);
             create_screenshot_button();
             create_removed_items_list();
+            create_removed_sections_list();
             get_removed_items_from_local_storage();
+            update_removed_sections_list();
 
             set_up_border_box_overlay();
             document.getElementById('introduction-page-buttons').remove(); // bye butttonss
 
             setTimeout(() => {
                 if (!REMOVED_ITEMS_PENDING_MOVEMENT.currently_showing) {
-                    document.getElementById('secondary').style.bottom = '16px';
+                    update_screenshot_button_position();
                 }
                 const controls = document.getElementById('view-controls');
                 controls.classList.add('initially-not-transparent');
