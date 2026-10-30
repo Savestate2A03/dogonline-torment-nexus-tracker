@@ -66,6 +66,10 @@
 
         #introduction-page-buttons {
             transform: scale(var(--intro-buttons-scale));
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
         }
 
         html::-webkit-scrollbar {
@@ -151,7 +155,7 @@
 
         main#main {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             width: 100%;
             justify-content: center;
             align-items: center;
@@ -688,16 +692,8 @@
         button.introduction-page-button {
             --script-button-width: 558px;
             --localstorage-button-width: 328px;
-            --localstorage-button-left-margin: 8px;
-
-            --to-the-left: -1.0;
-            --to-the-right: 1.0;
 
             --transition-time: 0.86s;
-
-            --solo-script-button-position: calc((var(--to-the-right) * (var(--localstorage-button-width) + var(--localstorage-button-left-margin))) / 2);
-            --solo-localstorage-button-position: calc((var(--to-the-left) * (var(--localstorage-button-width) + var(--localstorage-button-left-margin))) / 2);
-
 
             position: relative;
 
@@ -740,7 +736,6 @@
 
             &#use-localstorage-button {
                 width: var(--localstorage-button-width);
-                margin-left: var(--localstorage-button-left-margin);
             }
 
             &.bye {
@@ -749,19 +744,6 @@
                 pointer-events: none;
             }
 
-            &.solo {
-                * {
-                    box-sizing: border-box;
-                }
-
-                &#script-button {
-                    left: var(--solo-script-button-position);
-                }
-
-                &#use-localstorage-button {
-                    left: var(--solo-localstorage-button-position);
-                }
-            }
         }
 
         span.introduction-page-button-wrapper {
@@ -1683,6 +1665,7 @@
                     id="script-button" onclick="put_script_on_clipboard()">Copy
                     console-pastable script for getting data for
                     this webpage...</button></span>
+            <br>
             <span class="introduction-page-button-wrapper"><button class="introduction-page-button bye"
                     id="use-localstorage-button">Use existing data from last
                     session!</button></span>
