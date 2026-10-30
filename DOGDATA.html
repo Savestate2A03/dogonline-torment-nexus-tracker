@@ -43,6 +43,7 @@
             --color-toast-message-outline: #000000;
             --color-shadow: rgba(0, 0, 0, 0.2);
             --color-shadow-heavy: rgba(0, 0, 0, 0.2);
+            --color-shadow-very-heavy: rgba(0, 0, 0, 0.5);
             --color-inventory-item-border: #2b3b5e;
             --color-danger-overlay: rgba(255, 0, 0, 0.175);
             --color-danger: #ff0000;
@@ -81,7 +82,7 @@
         }
 
         #pan-layer.smooth-automatic-panning {
-            transition: transform 0.125s ease-in-out;
+            transition: transform 0.0s ease-in-out;
         }
 
         html.has-inventory {
@@ -206,7 +207,7 @@
         }
 
         main#main.it-has-stuff.smooth-automatic-zooming {
-            transition: transform 0.125s ease-in-out, opacity 1s ease-in-out;
+            transition: transform 0.0s ease-in-out, opacity 1s ease-in-out;
         }
 
         main#main.it-has-stuff.force-zoom {
@@ -657,20 +658,8 @@
             }
         }
 
-        body:not(:has(main#main.it-has-stuff.zoomed-in-enough)) {
-            * {
-                box-sizing: border-box;
-            }
-
-            &:has(main#main.it-has-stuff) {
-                * {
-                    box-sizing: border-box;
-                }
-
-                #zoomed-out-too-far-message {
-                    top: 16px;
-                }
-            }
+        body:not(:has(main#main.it-has-stuff.zoomed-in-enough)):has(main#main.it-has-stuff) #zoomed-out-too-far-message {
+            top: 16px;
         }
 
         main#main.it-has-stuff.zoomed-in-enough div.section div.item-wrapper:hover::before {
@@ -1322,19 +1311,21 @@
 
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
+            justify-content: space-evenly;
+            align-items: flex-start;
 
             * {
                 box-sizing: border-box;
             }
 
             #zoomed-out-too-far-message-box-label {
+                margin-left: 12px;
                 font-size: 28px;
             }
 
             #zoomed-out-too-far-message-box {
-                font-size: 18px;
+                font-size: 16px;
+                margin-left: 12px;
                 margin-bottom: 0px;
             }
         }
@@ -1404,6 +1395,102 @@
                 display: block;
                 pointer-events: none;
             }
+        }
+
+        #whats-new {
+            --transition-time: 0.3s;
+
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            color: var(--color-text);
+            font-size: 24px;
+
+            * {
+                box-sizing: border-box;
+            }
+
+            hr {
+                border: none;
+                height: 2px;
+                background-color: var(--color-scrollbar-track);
+                width: 100%;
+            }
+        }
+
+        #whats-new-expand {
+            cursor: pointer;
+            position: relative;
+            top: 0px;
+            left: 0px;
+            user-select: none;
+
+            * {
+                box-sizing: border-box;
+            }
+
+            &:hover {
+                text-shadow: 0 0 4px white;
+            }
+
+            &:active {
+                color: var(--color-scrollbar-thumb);
+                top: 1px;
+                left: 1px;
+            }
+        }
+
+        #whats-new-content {
+            min-height: 0;
+            border-style: solid;
+            border-color: var(--color-scrollbar-track);
+            border-top-width: 0px;
+            border-bottom-width: 0px;
+            border-left-width: 3px;
+            border-right-width: 0px;
+            background-color: var(--color-section-background);
+            padding-left: 14px;
+            padding-right: 14px;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            transition:
+                padding-top var(--transition-time) ease,
+                padding-bottom var(--transition-time) ease;
+        }
+
+        #whats-new-content-wrapper {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows var(--transition-time) ease;
+            overflow: hidden;
+            box-shadow: 4px 4px 16px var(--color-shadow-very-heavy);
+            max-width: 500px;
+            line-height: 20px;
+
+            * {
+                box-sizing: border-box;
+            }
+
+            &.expanded {
+                grid-template-rows: 1fr;
+
+                * {
+                    box-sizing: border-box;
+                }
+
+                #whats-new-content {
+                    padding-top: 8px;
+                    padding-bottom: 8px;
+                }
+            }
+        }
+
+        #pan-layer:has(main#main.smooth-automatic-zooming) {
+            border-width: 1px;
+            border-style: solid;
+            border-color: var(--color-adjustment-message-border);
         }
     </style>
 
@@ -1670,6 +1757,66 @@
                     id="use-localstorage-button">Use existing data from last
                     session!</button></span>
         </div>
+        <div id="whats-new" style="transform: scale(0.75); transform-origin: top left;">
+            <div id="whats-new-opener"><span id="whats-new-expand">[+]</span> What's new in v1.0.2?</div>
+            <div id="whats-new-content-wrapper">
+                <div id="whats-new-content">
+                    <div style="margin-bottom: 12px; font-size: 32px;">10/29/2026 | Lots of new updates!</div>
+                    <hr />
+                    <div style="padding-left: 20px; margin-bottom: 16px;">
+                        I had a backlog of bugfixes, feature requests, and changes I wanted to make outside of that
+                        which I would like to introduce you to in the latest version (v1.0.2).
+                        <br /><br />
+                        As always, if you
+                        experience any new bugs, or have feature requests, let me know in the discord!
+                    </div>
+                    <div style="padding-left: 20px">- Estradiol (aka Rei Wolf)</div>
+                    <hr />
+                    <div style="font-size: 28px">Bugfixes</div>
+                    <div>
+                        <ul style="list-style-type: square; margin-top: 4px; margin-bottom: 18px;">
+                            <li style="margin-bottom: 3px;">Removed items box becomes scrollable when it reaches the
+                                height of the window</li>
+                            <li style="margin-bottom: 3px;">Change scaling system to use CSS transforms instead of zoom
+                                (fixes weird jank)</li>
+                            <li style="margin-bottom: 3px;">Items no longer break in-between column boundaries</li>
+                            <li style="margin-bottom: 3px;">Removed the viewport restriction as it was entirely
+                                unnecessary (tendency to over-engineer)</li>
+                            <li style="margin-bottom: 3px;">Disabled smooth transitions when fitting zoom / adjusting
+                                column height as it tends to create more noise than actually smooth things out.</li>
+                        </ul>
+                    </div>
+                    <div style="font-size: 28px">New Features</div>
+                    <div>
+                        <ul style="list-style-type: square; margin-top: 4px; margin-bottom: 18px;">
+                            <li style="margin-bottom: 3px;">Column width is no longer an option, replaced by "Items Per
+                                Column"</li>
+                            <li style="margin-bottom: 3px;">Zoom menu auto-minimizes when not being used</li>
+                            <li style="margin-bottom: 3px;">Reduced the timeout for when the "Jump to section" panel
+                                disappears</li>
+                            <li style="margin-bottom: 3px;">Hide individual sections in addition to items!</li>
+                            <li style="margin-bottom: 3px;">
+                                Create modal that shows in top-left corner when you are too zoomed out
+                                to remove items by clicking on them. (needs to be > 0.5x zoom)
+                            </li>
+                        </ul>
+                    </div>
+                    <div style="font-size: 28px">Future Changes</div>
+                    <div>
+                        <ul style="list-style-type: square; margin-top: 4px; margin-bottom: 18px;">
+                            <li style="margin-bottom: 3px;">
+                                Create physical button that shows up on dogonline.net to copy data instead of having to
+                                type "DOGDATA" into the console as some users are reporting issues with this.
+                            </li>
+                            <li style="margin-bottom: 3px;">Add a storage section</li>
+                        </ul>
+                    </div>
+                    <hr style="margin-bottom: 8px" />
+                    <div style="font-size: 16px; width: fit-content; margin-left: auto; margin-right: auto;">Thank you
+                        for using DOGDATA!</div>
+                </div>
+            </div>
+        </div>
     </main>
     <main id="secondary" class="unselectable"></main>
     <main id="view-controls" class="unselectable">
@@ -1729,7 +1876,10 @@
     </main>
     <main id="zoomed-out-too-far-message">
         <div id="zoomed-out-too-far-message-box-label">Note</div>
-        <div id="zoomed-out-too-far-message-box">Zoom in to greater than 0.5x to remove individual items.</div>
+        <div id="zoomed-out-too-far-message-box">
+            <div style="margin-bottom: 8px;">Currently: You can click-and-drag anywhere to pan the view.</div>
+            <div>Zoom in to greater than 0.5x to be able to remove individual items from your inventory.</div>
+        </div>
     </main>
 
     <div id="laser-vision-overlay" aria-hidden="true">
@@ -3331,6 +3481,16 @@
             };
         }
 
+        function activate_whats_new() {
+            const expander = document.getElementById('whats-new-expand');
+            expander.onclick = () => {
+                const wrapper = document.getElementById('whats-new-content-wrapper');
+                wrapper.classList.toggle('expanded');
+                const expanded = wrapper.classList.contains('expanded');
+                expander.textContent = expanded ? '[-]' : '[+]';
+            }
+        }
+
         function process(data) {
             document.getElementById('encoded-data').remove(); // bye bye
             window[KEY] = data;
@@ -3361,6 +3521,8 @@
                     get_current_zoom(true) !== initial_view.zoom ||
                     PANNING_STATE.x !== initial_view.pan.x || PANNING_STATE.y !== initial_view.pan.y) return;
                 zoom_to_fit();
+                const whatsnew = document.getElementById('whats-new');
+                whatsnew.remove();
             });
             document.getElementById('introduction-page-buttons').remove(); // bye butttonss
 
@@ -3451,6 +3613,7 @@
             activate_zoom_panel();
             activate_panning_and_scrollwheel_zooming();
             activate_section_navigation();
+            activate_whats_new();
 
             let pulled_from_localstorage = false;
             get_dogdata_from_localstorage(); // non assignment just to update footer text lol
