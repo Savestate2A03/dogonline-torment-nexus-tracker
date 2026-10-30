@@ -653,6 +653,22 @@
             }
         }
 
+        body:not(:has(main#main.it-has-stuff.zoomed-in-enough)) {
+            * {
+                box-sizing: border-box;
+            }
+
+            &:has(main#main.it-has-stuff) {
+                * {
+                    box-sizing: border-box;
+                }
+
+                #zoomed-out-too-far-message {
+                    top: 16px;
+                }
+            }
+        }
+
         main#main.it-has-stuff.zoomed-in-enough div.section div.item-wrapper:hover::before {
             content: "\00a0[x]";
             position: absolute;
@@ -1281,7 +1297,7 @@
             font-size: 24px;
             transition: top 0.25s ease-in-out;
 
-            z-index: var(--z-index-adjustment-overlay);
+            z-index: calc(var(--z-index-adjustment-overlay) + 1);
 
             * {
                 box-sizing: border-box;
@@ -1295,6 +1311,48 @@
 
             div.title.adjusting-message-title {
                 font-size: 32px;
+                margin-bottom: 0px;
+            }
+        }
+
+        main#zoomed-out-too-far-message {
+            --width: 370px;
+            padding: 0;
+            margin: 0;
+            position: fixed;
+            width: var(--width);
+            left: 16px;
+            top: -200px;
+            font-size: 16px;
+            transition: top 0.25s ease-in-out;
+
+            z-index: var(--z-index-adjustment-overlay);
+
+            background-color: var(--color-danger-overlay);
+            border-color: var(--color-danger);
+            border-style: solid;
+            border-width: 1px;
+            border-radius: 16px;
+            padding: 8px;
+
+            box-shadow: 2px 2px 1px var(--color-shadow), 2px 2px 8px var(--color-shadow-heavy);
+            color: var(--color-text);
+
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+
+            * {
+                box-sizing: border-box;
+            }
+
+            #zoomed-out-too-far-message-box-label {
+                font-size: 28px;
+            }
+
+            #zoomed-out-too-far-message-box {
+                font-size: 18px;
                 margin-bottom: 0px;
             }
         }
@@ -1680,10 +1738,15 @@
     </main>
     <main id="adjusting-message" class="unselectable">
         <div class="section">
-            <div class="title adjusting-message-title">Info!</div>
-            <div class="adjusting-message-message">Adjust the height until items are around 4:3 ratio for best visibility!
+            <div class="title adjusting-message-title">Info</div>
+            <div class="adjusting-message-message">Adjust the height until items are around 4:3 ratio for best
+                visibility!
             </div>
         </div>
+    </main>
+    <main id="zoomed-out-too-far-message">
+        <div id="zoomed-out-too-far-message-box-label">Note</div>
+        <div id="zoomed-out-too-far-message-box">Zoom in to greater than 0.5x to remove individual items.</div>
     </main>
 
     <div id="laser-vision-overlay" aria-hidden="true">
