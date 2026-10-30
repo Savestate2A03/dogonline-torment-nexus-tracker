@@ -22,17 +22,17 @@
     <style>
         :root {
             /* stuff */
-            --stuff-width: 2600px;
+            --items-per-row: 6;
+            --inventory-column-width: calc(var(--items-per-row) * 68px + 2px);
             --stuff-height: 1800px;
             --stuff-zoom-level: 0.3;
 
             --encoded-area-width: 700px;
             --encoded-area-height: 500px;
-            --intro-buttons-zoom: 70%;
+            --intro-buttons-scale: 0.7;
 
             /* colors */
             --color-background: #0f2648;
-            --color-adjusting: #00a8f8;
             --color-button-background: #178a4c;
             --color-button-background-hover: #13733f;
             --color-button-border: #0f6b3a;
@@ -47,13 +47,9 @@
             --color-danger-overlay: rgba(255, 0, 0, 0.175);
             --color-danger: #ff0000;
             --color-warning: #ffbb00;
-            --color-caution: #ffff00;
             --color-notice: #9df7b8;
             --color-section-background: #1a2238;
             --color-section-border: #27375a;
-            --color-bounding-overlay-outline: rgba(2, 253, 2, 1.0);
-            --color-bounding-overlay-outline-laser-vision: rgba(2, 253, 2, 1.0);
-            --color-bounding-overlay-background: rgba(0, 0, 0, 0.35);
             --color-transparent: rgba(0, 0, 0, 0);
             --color-scrollbar-track: #3f5177;
             --color-scrollbar-thumb: #859dc2;
@@ -64,14 +60,12 @@
             --z-index-overlay-menus: 200;
             --z-index-overlay-menus-popups: 300;
             --z-index-laser-vision-overlay: 50;
-            --z-index-laser-vision-base: 51;
-            --z-index-laser-vision-box: 52;
             --z-index-adjustment-overlay: 500;
             --z-index-checkbox-thing: 1000;
         }
 
         #introduction-page-buttons {
-            zoom: var(--intro-buttons-zoom);
+            transform: scale(var(--intro-buttons-scale));
         }
 
         html::-webkit-scrollbar {
@@ -92,8 +86,11 @@
 
         html.has-inventory #pan-layer {
             display: block;
-            flex: 0 0 auto;
-            width: max-content;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            width: 0;
+            height: 0;
         }
 
         body:has(main#main.it-has-stuff),
@@ -172,18 +169,30 @@
 
         main#main.it-has-stuff {
             display: block;
-            width: var(--stuff-width);
-            max-width: var(--stuff-width);
-            min-width: var(--stuff-width);
-            column-width: 500px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            box-sizing: content-box;
+            width: var(--inventory-column-width);
+            max-width: none;
+            min-width: var(--inventory-column-width);
+            column-width: var(--inventory-column-width);
             column-gap: 12px;
+            column-fill: auto;
             flex-direction: unset;
             height: var(--stuff-height);
-            zoom: var(--stuff-zoom-level);
+            transform: scale(var(--stuff-zoom-level));
+            transform-origin: 0 0;
             transition: opacity 1s ease-in-out;
+            pointer-events: none;
+
 
             * {
                 box-sizing: border-box;
+            }
+
+            &.zoomed-in-enough {
+                pointer-events: auto;
             }
 
             div.section.removed,
@@ -193,18 +202,10 @@
         }
 
         main#main.it-has-stuff.smooth-automatic-zooming {
-            transition: zoom 0.125s ease-in-out, opacity 1s ease-in-out;
-        }
-
-        main#main.it-has-stuff.adjusting {
-            background-color: var(--color-adjusting);
+            transition: transform 0.125s ease-in-out, opacity 1s ease-in-out;
         }
 
         main#main.it-has-stuff.force-zoom {
-            pointer-events: none !important;
-        }
-
-        main#main.it-has-stuff.back-from-force-zoom {
             pointer-events: none !important;
         }
 
@@ -394,6 +395,8 @@
         main#main>div.section>.title {
             padding-left: 32px;
             padding-right: 32px;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .section-remove-button {
@@ -408,6 +411,7 @@
             font-size: 24px;
             line-height: 24px;
             cursor: pointer;
+            pointer-events: auto;
 
             * {
                 box-sizing: border-box;
@@ -418,314 +422,48 @@
             }
         }
 
-        div#four-box-overlay {
+        #laser-vision-overlay {
             position: fixed;
-
-            margin: 0;
-            padding: 0;
-
+            inset: 0;
             pointer-events: none;
-
-            width: 100vw;
-            height: 100vh;
-
             overflow: hidden;
-
-            top: 0;
-            left: 0;
-
-            opacity: 0;
-            transition: opacity 0.75s ease-in-out;
-
-            --debug-width: 150px;
-            --debug-height: 150px;
-
-            --default-width: 10px;
-            --default-height: 10px;
-
-            --box-debug: 1;
-            --box-production: calc(1 - var(--box-debug));
-
-            --starting-width: calc((var(--box-debug) * var(--debug-width)) + (var(--box-production) * var(--default-width)));
-            --starting-height: calc((var(--box-debug) * var(--debug-height)) + (var(--box-production) * var(--default-height)));
-
-            --top-height: var(--starting-height);
-            --bottom-height: var(--starting-height);
-            --left-width: var(--starting-width);
-            --right-width: var(--starting-width);
-
-            --sides-height: calc(100vh - var(--top-height) - var(--bottom-height));
-
-            --outline-thickness: 1px;
-
-            /* god help me */
-
-            --outline-top-bottom-width: calc(100vw - var(--left-width) - var(--right-width));
-            --outline-sides-height: calc(var(--sides-height) + (var(--outline-thickness) * 2));
-            --outline-top-distance-from-top: calc(var(--top-height) - var(--outline-thickness));
-            --outline-top-distance-from-left: var(--left-width);
-            --outline-bottom-distance-from-bottom: calc(var(--bottom-height) - var(--outline-thickness));
-            --outline-bottom-distance-from-right: var(--right-width);
-            --outline-left-distance-from-top: calc(var(--top-height) - var(--outline-thickness));
-            --outline-left-distance-from-left: calc(var(--left-width) - var(--outline-thickness));
-            --outline-right-distance-from-bottom: calc(var(--bottom-height) - var(--outline-thickness));
-            --outline-right-distance-from-right: calc(var(--right-width) - var(--outline-thickness));
-
-            * {
-                box-sizing: border-box;
-            }
-
-            div#blur-filter {
-                position: fixed;
-                margin: 0;
-                padding: 0;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
-                overflow: hidden;
-                opacity: 0;
-                transition: opacity 0.5s ease-in-out;
-                -webkit-backdrop-filter: blur(5px);
-                backdrop-filter: blur(5px);
-                mask-image:
-                    linear-gradient(to bottom, black var(--top-height), transparent var(--top-height) calc(100% - var(--bottom-height)), black calc(100% - var(--bottom-height))),
-                    linear-gradient(to right, black var(--left-width), transparent var(--left-width) calc(100% - var(--right-width)), black calc(100% - var(--right-width)));
-                -webkit-mask-image:
-                    linear-gradient(to bottom, black var(--top-height), transparent var(--top-height) calc(100% - var(--bottom-height)), black calc(100% - var(--bottom-height))),
-                    linear-gradient(to right, black var(--left-width), transparent var(--left-width) calc(100% - var(--right-width)), black calc(100% - var(--right-width)));
-                -webkit-mask-composite: source-over;
-                mask-composite: exclude;
-
-                * {
-                    box-sizing: border-box;
-                }
-
-                &.enabled {
-                    opacity: 1.0;
-                }
-            }
-
-            div.four-box-overlay-outline {
-                position: fixed;
-                margin: 0;
-                padding: 0;
-                background-color: var(--color-bounding-overlay-outline);
-
-                * {
-                    box-sizing: border-box;
-                }
-
-                &#outline-top {
-                    width: var(--outline-top-bottom-width);
-                    height: var(--outline-thickness);
-                    top: var(--outline-top-distance-from-top);
-                    left: var(--outline-top-distance-from-left);
-                }
-
-                &#outline-bottom {
-                    width: var(--outline-top-bottom-width);
-                    height: var(--outline-thickness);
-                    bottom: var(--outline-bottom-distance-from-bottom);
-                    right: var(--outline-bottom-distance-from-right);
-                }
-
-                &#outline-left {
-                    width: var(--outline-thickness);
-                    height: var(--outline-sides-height);
-                    top: var(--outline-left-distance-from-top);
-                    left: var(--outline-left-distance-from-left);
-                }
-
-                &#outline-right {
-                    width: var(--outline-thickness);
-                    height: var(--outline-sides-height);
-                    bottom: var(--outline-right-distance-from-bottom);
-                    right: var(--outline-right-distance-from-right);
-                }
-            }
-
-            div.four-box-overlay-box {
-                position: fixed;
-                margin: 0;
-                padding: 0;
-                background-color: var(--color-transparent);
-                transition: background-color 1s ease-in-out;
-
-                * {
-                    box-sizing: border-box;
-                }
-
-                &#box-top {
-                    width: 100vw;
-                    height: var(--top-height);
-                    top: 0px;
-                    left: 0px;
-                }
-
-                &#box-left {
-                    width: var(--left-width);
-                    height: var(--sides-height);
-                    top: var(--top-height);
-                    left: 0px;
-                }
-
-                &#box-bottom {
-                    width: 100vw;
-                    height: var(--bottom-height);
-                    bottom: 0px;
-                    right: 0px;
-                }
-
-                &#box-right {
-                    width: var(--right-width);
-                    height: var(--sides-height);
-                    bottom: var(--bottom-height);
-                    right: 0px;
-                }
-
-            }
-
-            &.frosted-area-grabbable {
-                * {
-                    box-sizing: border-box;
-                }
-
-                div.four-box-overlay-box {
-                    pointer-events: auto;
-                }
-            }
-        }
-
-        div#four-box-overlay:has(div#blur-filter.enabled) div.four-box-overlay-box {
-            background-color: var(--color-bounding-overlay-background);
-        }
-
-        body:has(main#main.it-has-stuff) div#four-box-overlay {
-            opacity: 1.0;
-        }
-
-        div#laser-vision-overlay {
-            position: fixed;
-
-            margin: 0;
-            padding: 0;
-
-            pointer-events: none;
-
-            width: 100vw;
-            height: 100vh;
-
-            overflow: hidden;
-
-            top: 0px;
-            left: 0px;
-
             z-index: var(--z-index-laser-vision-overlay);
+        }
 
-            * {
-                box-sizing: border-box;
-            }
+        #laser-vision-ui-info {
+            --thickness: 1px;
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.975s ease-in-out 0.988s;
+        }
 
-            div#laser-vision-ui-info,
-            div#laser-vision-out-of-bounds {
-                position: fixed;
-                top: 0px;
-                left: 0px;
-                width: 100vw;
-                height: 100vh;
-                margin: 0;
-                padding: 0;
-                opacity: 0.0;
-                background-color: var(--color-transparent);
-                transition: opacity 0.975s ease-in-out 0.988s;
+        #laser-vision-ui-info.show {
+            opacity: 1;
+            transition: opacity 0.125s ease-in-out;
+        }
 
-                z-index: var(--z-index-laser-vision-base);
+        #laser-vision-ui-info .box {
+            --clamped-tl-x: clamp(0px, var(--tl-x), 100vw);
+            --clamped-tl-y: clamp(0px, var(--tl-y), 100vh);
+            --clamped-br-x: clamp(0px, var(--br-x), 100vw);
+            --clamped-br-y: clamp(0px, var(--br-y), 100vh);
+            position: fixed;
+            left: var(--clamped-tl-x);
+            top: var(--clamped-tl-y);
+            width: calc(var(--clamped-br-x) - var(--clamped-tl-x));
+            height: calc(var(--clamped-br-y) - var(--clamped-tl-y));
+            background-color: var(--color-warning);
+            box-shadow: 0 0 6px var(--color-warning), 0 0 2px var(--color-warning);
+            transition: left 0.125s ease-in-out, top 0.125s ease-in-out,
+                width 0.125s ease-in-out, height 0.125s ease-in-out;
+        }
 
-                --thickness: 1px;
-
-                * {
-                    box-sizing: border-box;
-                }
-
-                &.show {
-                    opacity: 1.0;
-                    transition: opacity 0.125s ease-in-out;
-                }
-
-                div.box {
-                    --tl-x: 0px;
-                    --tl-y: 0px;
-                    --br-x: 0px;
-                    --br-y: 0px;
-
-                    --clamped-tl-x: max(min(var(--tl-x), 100vw), 0px);
-                    --clamped-tl-y: max(min(var(--tl-y), 100vh), 0px);
-                    --clamped-br-x: max(min(var(--br-x), 100vw), 0px);
-                    --clamped-br-y: max(min(var(--br-y), 100vh), 0px);
-
-                    --box-outline-color: var(--color-notice);
-
-                    position: fixed;
-
-                    z-index: var(--z-index-laser-vision-box);
-
-                    left: var(--clamped-tl-x);
-                    top: var(--clamped-tl-y);
-                    width: calc(var(--clamped-br-x) - var(--clamped-tl-x));
-                    height: calc(var(--clamped-br-y) - var(--clamped-tl-y));
-
-                    transition:
-                        left 0.125s ease-in-out,
-                        top 0.125s ease-in-out,
-                        width 0.125s ease-in-out,
-                        height 0.125s ease-in-out;
-
-                    margin: 0;
-                    padding: 0;
-
-                    background-color: var(--box-outline-color);
-                    box-shadow:
-                        0px 0px 6px var(--box-outline-color),
-                        0px 0px 2px var(--box-outline-color);
-
-                    * {
-                        box-sizing: border-box;
-                    }
-
-                    html.panning &,
-                    html.disable-interactions &,
-                    #pan-layer.smooth-automatic-panning~#laser-vision-overlay #laser-vision-ui-info &,
-                    #pan-layer.smooth-automatic-panning~#laser-vision-overlay #laser-vision-out-of-bounds & {
-                        transition:
-                            left 0s ease-in-out,
-                            top 0s ease-in-out,
-                            width 0s ease-in-out,
-                            height 0s ease-in-out;
-                    }
-                }
-            }
-
-            div#laser-vision-ui-info {
-                * {
-                    box-sizing: border-box;
-                }
-
-                div.box {
-                    --box-outline-color: var(--color-warning);
-                }
-            }
-
-            div#laser-vision-out-of-bounds {
-                * {
-                    box-sizing: border-box;
-                }
-
-                div.box {
-                    --box-outline-color: var(--color-bounding-overlay-outline-laser-vision);
-                    box-shadow: none;
-                }
-            }
+        html.panning #laser-vision-ui-info .box,
+        html.disable-interactions #laser-vision-ui-info .box,
+        #pan-layer.smooth-automatic-panning~#laser-vision-overlay .box,
+        #pan-layer:has(.smooth-automatic-zooming)~#laser-vision-overlay .box {
+            transition: none;
         }
 
         textarea#encoded-data {
@@ -852,6 +590,7 @@
 
             div.item-wrapper {
                 display: flex;
+                break-inside: avoid;
                 flex-direction: column;
                 align-items: center;
                 gap: 0px;
@@ -917,13 +656,17 @@
         main#main.it-has-stuff.zoomed-in-enough div.section div.item-wrapper:hover::before {
             content: "\00a0[x]";
             position: absolute;
-            width: 100%;
+            margin: 0;
+            padding: 0;
+            width: 90%;
             height: 100%;
             background-color: var(--color-danger-overlay);
             z-index: var(--z-index-inventory-item-hover-overlay);
             color: var(--color-danger);
             font-size: 16px;
             line-height: 16px;
+            text-align: right;
+            padding-right: 10%;
         }
 
         button.introduction-page-button {
@@ -1087,6 +830,7 @@
 
                     div.slider-label {
                         font-size: 24px;
+                        text-align: center;
                     }
 
                     div.slider-label.small {
@@ -1315,13 +1059,11 @@
                         padding: 12px;
                         margin: 0;
                         gap: 8px;
-                        opacity: 0;
+                        opacity: 1.0;
                         pointer-events: none;
                         transform-origin: left;
                         transform: scaleX(0.0) translateX(-32px);
-                        transition:
-                            opacity 0.115s ease-in-out,
-                            transform 0.2s ease-in-out;
+                        transition: transform 0.2s ease-out;
 
                         * {
                             box-sizing: border-box;
@@ -1370,14 +1112,13 @@
 
                     div.section-navigation:hover div.section-navigation-menu,
                     div.section-navigation.open div.section-navigation-menu {
-                        opacity: 1;
                         transform: scaleX(1.0) translateX(0px);
                         pointer-events: auto;
                     }
 
                     div.section-navigation.fading-out div.section-navigation-menu {
-                        opacity: 0.0;
-                        transition: opacity 1s ease-in-out;
+                        transform: scaleX(0.0) translateX(0px);
+                        transition: transform 0.2s ease-in;
                     }
 
                     div.zoom-label {
@@ -1466,6 +1207,44 @@
             &:has(div.section-navigation:hover) {
                 opacity: 1.0;
             }
+        }
+
+        #items-per-row-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 6px;
+            font-size: 24px;
+        }
+
+        #items-per-row-controls button {
+            width: 42px;
+            height: 42px;
+            border: 3px solid var(--color-button-border);
+            border-radius: 8px;
+            background: var(--color-button-background);
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 32px;
+            line-height: 1;
+            box-shadow: 4px 4px 4px var(--color-shadow);
+            cursor: pointer;
+        }
+
+        #items-per-row-controls button:hover {
+            border-color: var(--color-button-border-hover);
+            background: var(--color-button-background-hover);
+        }
+
+        #items-per-row-controls button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 1px var(--color-shadow);
+        }
+
+        #items-per-row-controls button:disabled {
+            opacity: 0.5;
+            cursor: default;
         }
 
         main#view-controls.show {
@@ -1605,6 +1384,25 @@
             configurable: true,
         });
 
+        function normalize_dogdata_dimensions(dogdata) {
+            let updated = false;
+            if (!dogdata.dimensions || typeof dogdata.dimensions !== 'object' || Array.isArray(dogdata.dimensions)) {
+                dogdata.dimensions = { '--stuff-height': -1 };
+                updated = true;
+            }
+            const dimensions = dogdata.dimensions;
+            const items = dimensions['--items-per-row'];
+            if (!Number.isInteger(items) || items < 1) {
+                dimensions['--items-per-row'] = 6;
+                updated = true;
+            }
+            if (Object.hasOwn(dimensions, '--stuff-width')) {
+                delete dimensions['--stuff-width'];
+                updated = true;
+            }
+            return updated;
+        }
+
         // mostly placeholders until this actually happens...
         // important: make all modifications to dogdata in place!
         const UPGRADE_PATHS = {
@@ -1622,6 +1420,7 @@
                 if (!Array.isArray(dogdata.removed_sections)) {
                     Object.defineProperty(dogdata, 'removed_sections', ATTRIBUTE_DEFAULTS([]));
                 }
+                normalize_dogdata_dimensions(dogdata);
                 dogdata.version = 'v1.0.2';
             },
 
@@ -1687,7 +1486,7 @@
             elementId,
             filename = 'inventory.png',
             {
-                scale = window.devicePixelRatio || 1,
+                scale = 1,
                 bg = getComputedStyle(document.body).backgroundColor,
             } = {},
         ) {
@@ -1728,12 +1527,9 @@
             Object.assign(clone.style, {
                 margin: '0',
                 transform: 'none',
-                zoom: '1',
                 position: 'static',
                 inset: 'auto',
                 opacity: '1',
-                width: `${element.offsetWidth}px`,
-                height: `${element.offsetHeight}px`,
             });
             clone.querySelector('#screenshot-button')?.remove();
             clone.querySelectorAll('.section-remove-button').forEach(button => button.remove());
@@ -1769,8 +1565,12 @@
                 await target.decode();
             }));
 
-            const width = Math.max(element.offsetWidth, element.scrollWidth);
-            const height = Math.max(element.offsetHeight, element.scrollHeight);
+            const bounds = elementId === 'main' ? get_panning_bounds() : element.getBoundingClientRect();
+            const transform = getComputedStyle(element).transform;
+            const matrix = new DOMMatrixReadOnly(transform === 'none' ? undefined : transform);
+            const rendered_scale = Math.hypot(matrix.m11, matrix.m12) || 1;
+            const width = Math.ceil(bounds.width / rendered_scale);
+            const height = Math.ceil(bounds.height / rendered_scale);
             const ns = 'http://www.w3.org/2000/svg';
             const svg = document.createElementNS(ns, 'svg');
             svg.setAttribute('width', String(width));
@@ -1860,67 +1660,55 @@
                 </div>
             </div>
             <div class="size-controls">
-                <div class="slider-label">Adjust Width</div>
-                <div class="slider-wrapper">
-                    <div id="slider-width" class="slider"></div>
-                    <div class="slider-shadow"></div>
-                    <div class="slider-shadow"></div>
-                    <div class="slider-shadow-2"></div>
+                <div class="slider-label">Items Per Row</div>
+                <div id="items-per-row-controls">
+                    <button id="items-per-row-minus" type="button" aria-label="Fewer items per row">-</button>
+                    <div id="items-per-row-display">6</div>
+                    <button id="items-per-row-plus" type="button" aria-label="More items per row">+</button>
                 </div>
-                <div class="slider-label small" id="slider-label-width">2870px</div>
                 <div class="slider-gap"></div>
-                <div class="slider-label">Adjust Height</div>
+                <div class="slider-label">Column Height</div>
                 <div class="slider-wrapper">
                     <div id="slider-height" class="slider"></div>
                     <div class="slider-shadow"></div>
                     <div class="slider-shadow"></div>
                     <div class="slider-shadow-2"></div>
                 </div>
-                <div class="slider-label small" id="slider-label-height">2090px</div>
+                <div class="slider-label small" id="slider-label-height">1800px</div>
             </div>
         </div>
     </main>
     <main id="adjusting-message" class="unselectable">
         <div class="section">
             <div class="title adjusting-message-title">Info!</div>
-            <div class="adjusting-message-message">Make sure all sections fit within the highlighted blue bounding box!
+            <div class="adjusting-message-message">Adjust the height until items are around 4:3 ratio for best visibility!
             </div>
         </div>
     </main>
 
-    <div id="four-box-overlay" class="disabled">
-        <div class="four-box-overlay-box" id="box-top"></div>
-        <div class="four-box-overlay-box" id="box-left"></div>
-        <div class="four-box-overlay-box" id="box-right"></div>
-        <div class="four-box-overlay-box" id="box-bottom"></div>
-        <div id="blur-filter"></div>
-        <div class="four-box-overlay-outline" id="outline-top"></div>
-        <div class="four-box-overlay-outline" id="outline-left"></div>
-        <div class="four-box-overlay-outline" id="outline-right"></div>
-        <div class="four-box-overlay-outline" id="outline-bottom"></div>
-    </div>
-
-    <div id="laser-vision-overlay">
+    <div id="laser-vision-overlay" aria-hidden="true">
         <div id="laser-vision-ui-info"></div>
-        <div id="laser-vision-out-of-bounds"></div>
     </div>
 
     <div id="bottom-left-checkbox-thing" class="invisible" onclick="check_the_checkbox()">
         <input type="checkbox" id="minimal-zoom-options" autocomplete="off" />
-        <label>Use minimal zoom options</label>
+        <label>Keep zoom panel minimized</label>
     </div>
 
     <div id="infomatic">Loading...</div>
 
     <script>
-        let GAP_COUNT = 0;
-
         const ZOOM_SCROLLWHEL_STATE = {
             timeout: null,
             which: null,
             active: false,
             scrollwheel_initated: false,
         }
+
+        const ZOOM_PANEL_STATE = {
+            collapse_timeout: null,
+            opening_timeout: null,
+        };
 
         const MOUSE_BUTTON = {
             LEFT: 0,
@@ -1941,9 +1729,10 @@
 
         const PANNING_STATE = { x: 0, y: 0 };
 
-        const LASER_VISION_OUT_OF_BOUNDS_STATE = {
-            element_ids: new WeakMap(),
-            next_id: 0,
+        const LASER_VISION_UI_INFO_STATE = {
+            element: null,
+            animation_frame: null,
+            hide_timeout: null,
         };
 
         const AUTOMATIC_VIEW_STATE = {
@@ -1951,6 +1740,13 @@
             timeout: null,
             measuring: false,
             held: false,
+        };
+
+        const PAN_LAYER_BOUNDS_STATE = {
+            animation_frame: null,
+            resize_observer: null,
+            mutation_observer: null,
+            sections: new Set(),
         };
 
         const REMOVED_ITEM_MESSAGE_STATE = {
@@ -2082,7 +1878,7 @@
                     removed_sections: [],
                     last_updated: Date.now(),
                     version: CURRENT_DOGDATA_VERSION,
-                    dimensions: { '--stuff-width': -1, '--stuff-height': -1 },
+                    dimensions: { '--items-per-row': 6, '--stuff-height': -1 },
                     encoded_base64_data: '',
                 });
             }
@@ -2109,6 +1905,7 @@
                 dogdata.removed_sections = [];
                 updated = true;
             }
+            if (normalize_dogdata_dimensions(dogdata)) updated = true;
             if (updated) localStorage.setItem(DOGDATA_LOCALSTORAGE_KEY, JSON.stringify(dogdata));
 
             set_footer_text(dogdata.last_updated);
@@ -2231,7 +2028,7 @@
             document.documentElement.style.setProperty('--stuff-zoom-level', String(zoom));
             document.getElementById('zoom-label-display').innerText = `${zoom.toFixed(2)}x`;
             const main = () => document.getElementById('main').classList;
-            if (zoom >= 0.50) {
+            if (zoom > 0.50) {
                 if (!main().contains('zoomed-in-enough')) {
                     main().add('zoomed-in-enough');
                 }
@@ -2240,13 +2037,79 @@
                     main().remove('zoomed-in-enough');
                 }
             }
+            update_pan_layer_bounds();
+            schedule_pan_layer_bounds_update();
+        }
+
+        function update_pan_layer_bounds() {
+            const layer = document.getElementById('pan-layer');
+            if (!layer || !document.documentElement.classList.contains('has-inventory')) return;
+            const bounds = get_panning_bounds();
+            if (!bounds) return;
+            for (const property of ['width', 'height']) {
+                const value = `${Math.max(0, bounds[property])}px`;
+                if (layer.style.getPropertyValue(property) !== value) layer.style.setProperty(property, value);
+            }
+        }
+
+        function schedule_pan_layer_bounds_update() {
+            const state = PAN_LAYER_BOUNDS_STATE;
+            if (state.animation_frame !== null) return;
+            state.animation_frame = requestAnimationFrame(() => {
+                state.animation_frame = null;
+                update_pan_layer_bounds();
+                const main = document.getElementById('main');
+                const scaling = main.getAnimations().some(animation =>
+                    animation.playState === 'running' && animation.transitionProperty === 'transform'
+                );
+                if (scaling) schedule_pan_layer_bounds_update();
+            });
+        }
+
+        function observe_pan_layer_bounds() {
+            const state = PAN_LAYER_BOUNDS_STATE;
+            if (state.resize_observer) return;
+            const main = document.getElementById('main');
+            state.resize_observer = new ResizeObserver(schedule_pan_layer_bounds_update);
+            state.resize_observer.observe(main);
+            const update_sections = () => {
+                const sections = new Set(main.querySelectorAll(':scope > .section'));
+                for (const section of state.sections) {
+                    if (!sections.has(section)) state.resize_observer.unobserve(section);
+                }
+                for (const section of sections) {
+                    if (!state.sections.has(section)) state.resize_observer.observe(section);
+                }
+                state.sections = sections;
+            };
+            update_sections();
+            state.mutation_observer = new MutationObserver(records => {
+                if (records.some(record => record.type === 'childList')) update_sections();
+                schedule_pan_layer_bounds_update();
+            });
+            state.mutation_observer.observe(main, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'style'],
+            });
+            main.addEventListener('load', schedule_pan_layer_bounds_update, true);
+            main.addEventListener('transitionrun', schedule_pan_layer_bounds_update);
+            main.addEventListener('transitionend', schedule_pan_layer_bounds_update);
+            main.addEventListener('transitioncancel', schedule_pan_layer_bounds_update);
+            window.addEventListener('resize', schedule_pan_layer_bounds_update);
+            document.fonts.ready.then(schedule_pan_layer_bounds_update);
+            document.fonts.addEventListener('loadingdone', schedule_pan_layer_bounds_update);
+            schedule_pan_layer_bounds_update();
         }
 
         function get_rendered_view() {
             const main = document.getElementById('main');
             const transform = getComputedStyle(document.getElementById('pan-layer')).transform;
             const matrix = transform === 'none' ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(transform);
-            return { zoom: parseFloat(getComputedStyle(main).zoom), pan: { x: matrix.m41, y: matrix.m42 } };
+            const scale = getComputedStyle(main).transform;
+            const scaled = scale === 'none' ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(scale);
+            return { zoom: Math.hypot(scaled.m11, scaled.m12), pan: { x: matrix.m41, y: matrix.m42 } };
         }
 
         function stop_automatic_view() {
@@ -2325,7 +2188,7 @@
                 layer.classList.remove('smooth-automatic-panning');
             };
             const animations = [main, layer].flatMap(element => element.getAnimations().filter(animation =>
-                animation.transitionProperty === 'zoom' || animation.transitionProperty === 'transform'
+                animation.transitionProperty === 'transform'
             ));
             if (animations.length) Promise.allSettled(animations.map(animation => animation.finished)).then(finish);
             else state.timeout = setTimeout(finish, 125);
@@ -2347,31 +2210,50 @@
             const main = document.getElementById('main');
             if (!main.classList.contains('it-has-stuff')) return null;
 
-            if (section_name === null) {
-                const bounds = main.getBoundingClientRect();
-                return {
-                    left: bounds.left,
-                    top: bounds.top,
-                    width: bounds.width,
-                    height: bounds.height,
-                };
-            }
-
-            const name = String(section_name).simplify();
-            const section = get_visible_sections().find(element =>
+            const sections = get_visible_sections();
+            const name = section_name === null ? null : String(section_name).simplify();
+            const section = name === null ? null : sections.find(element =>
                 element.id === name || element.id === `section-${name}` ||
                 element.querySelector('.title').textContent.simplify() === name
             );
-            if (!section) return null;
+            if (name !== null && !section) return null;
 
-            const fragments = [...section.getClientRects()];
-            const left = Math.min(...fragments.map(rect => rect.left));
-            const top = Math.min(...fragments.map(rect => rect.top));
+            const content = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
+            for (const element of section ? [section] : sections) {
+                // include overflowing items
+                const elements = [element, ...element.querySelectorAll(':scope > .title, :scope > .item-wrapper:not(.removed)')];
+                for (const child of elements) {
+                    for (const rect of child.getClientRects()) {
+                        content.left = Math.min(content.left, rect.left);
+                        content.top = Math.min(content.top, rect.top);
+                        content.right = Math.max(content.right, rect.right);
+                        content.bottom = Math.max(content.bottom, rect.bottom);
+                    }
+                }
+            }
+            if (section) {
+                return {
+                    left: content.left,
+                    top: content.top,
+                    width: content.right - content.left,
+                    height: content.bottom - content.top,
+                };
+            }
+            const origin = main.getBoundingClientRect();
+            const style = getComputedStyle(main);
+            const transform = new DOMMatrixReadOnly(style.transform === 'none' ? undefined : style.transform);
+            const scale = Math.hypot(transform.m11, transform.m12) || 1;
+            const padding = {
+                left: parseFloat(style.paddingLeft) || 0,
+                top: parseFloat(style.paddingTop) || 0,
+                right: parseFloat(style.paddingRight) || 0,
+                bottom: parseFloat(style.paddingBottom) || 0,
+            };
             return {
-                left,
-                top,
-                width: Math.max(...fragments.map(rect => rect.right)) - left,
-                height: Math.max(...fragments.map(rect => rect.bottom)) - top,
+                left: origin.left,
+                top: origin.top,
+                width: Math.max(padding.left * scale, content.right - origin.left) + padding.right * scale,
+                height: Math.max(padding.top * scale, content.bottom - origin.top) + padding.bottom * scale,
             };
         }
 
@@ -2394,16 +2276,17 @@
 
         function zoom_to_fit(section_name = null) {
             if (!AUTOMATIC_VIEW_STATE.measuring) return update_automatic_view(() => zoom_to_fit(section_name));
-            const main = document.getElementById('main');
             let bounds = get_panning_bounds(section_name);
             if (!bounds) return;
-            const factor = 0.7;
-            const zoom = parseFloat(getComputedStyle(main).zoom);
+            const factor = {
+                height: 0.95,
+                width: 0.95,
+            };
+            const zoom = get_rendered_view().zoom;
             const step = 0.05;
-            const available = { width: window.innerWidth * factor, height: window.innerHeight * factor };
+            const available = { width: window.innerWidth * factor.width, height: window.innerHeight * factor.height };
             const target = Math.min(available.width / (bounds.width / zoom), available.height / (bounds.height / zoom));
             let amount = Math.min(Math.max(Math.floor((target + 0.001) / step) * step, ZOOM_BOUNDS.MIN), ZOOM_BOUNDS.MAX);
-            amount = amount > 1.0 ? 1.0 : amount;
             set_current_zoom(Number(amount.toFixed(2)));
 
             // remeasure after zoom
@@ -2417,197 +2300,117 @@
             return get_current_zoom(true);
         }
 
-        let checkbox_timeout = null;
-
-        function check_the_checkbox() {
-            const input = document.getElementById('minimal-zoom-options');
-            input.checked = !input.checked;
+        function set_zoom_panel_minimized(minimized) {
+            const state = ZOOM_PANEL_STATE;
             const controls = document.querySelector('main#view-controls div.section.controls div.zoom-controls');
-            if (input.checked && !controls.classList.contains('minimized')) {
-                if (checkbox_timeout !== null) {
-                    clearTimeout(checkbox_timeout);
-                    checkbox_timeout = null;
-                }
+            if (controls.classList.contains('minimized') === minimized) return;
+            clearTimeout(state.opening_timeout);
+            state.opening_timeout = null;
+            if (minimized) {
+                controls.classList.remove('opening');
                 controls.classList.add('minimized');
-            } else if (!input.checked && controls.classList.contains('minimized')) {
+            } else {
                 controls.classList.add('opening');
                 controls.classList.remove('minimized');
-                checkbox_timeout = setTimeout(() => {
+                state.opening_timeout = setTimeout(() => {
                     controls.classList.remove('opening');
-                    checkbox_timeout = null;
+                    state.opening_timeout = null;
                 }, 454);
             }
         }
 
-        function draw_laser_vision_out_of_bounds_lines() {
-            const overlay = document.getElementById('laser-vision-overlay');
-            const collection = overlay?.querySelector(`div#laser-vision-out-of-bounds`) ?? null;
-            if (collection === null) {
-                console.error('Could not find laser vision box group for out of bounds!');
+        function update_zoom_panel() {
+            const state = ZOOM_PANEL_STATE;
+            const controls = document.getElementById('view-controls');
+            clearTimeout(state.collapse_timeout);
+            state.collapse_timeout = null;
+            if (document.getElementById('minimal-zoom-options').checked) {
+                set_zoom_panel_minimized(true);
                 return;
             }
-
-            const intersects = (a, b) => (
-                a.width > 0 && a.height > 0 &&
-                b.width > 0 && b.height > 0 &&
-                a.left < b.right &&
-                a.right > b.left &&
-                a.top < b.bottom &&
-                a.bottom > b.top
-            );
-
-            const viewport = {
-                left: 0,
-                top: 0,
-                right: window.innerWidth,
-                bottom: window.innerHeight,
-                width: window.innerWidth,
-                height: window.innerHeight
-            };
-
-            const overlays = [...document.querySelectorAll('div#four-box-overlay div.four-box-overlay-box')]
-                .map(element => element.getBoundingClientRect())
-                .filter(rect => intersects(rect, viewport));
-            const items = [...document.getElementById('main').querySelectorAll('div.section:not(.removed) div.item-wrapper:not(.removed)')];
-            const masked = items.filter(item => {
-                if (!item.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
-                return [...item.getClientRects()].some(rect =>
-                    intersects(rect, viewport) && overlays.some(overlay => intersects(rect, overlay))
-                );
-            });
-
-            const thickness = Math.max(0, parseFloat(getComputedStyle(collection).getPropertyValue('--thickness')) || 0);
-            const state = LASER_VISION_OUT_OF_BOUNDS_STATE;
-            const lines = [];
-
-            masked.forEach(element => {
-                if (!element.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return;
-                [...element.getClientRects()].forEach(({ left, right, top, bottom, width, height }, idx) => {
-                    if (!intersects({ left, right, top, bottom, width, height }, viewport)) return;
-                    if (!state.element_ids.has(element)) {
-                        state.element_ids.set(element, state.next_id++);
-                    }
-                    const id = state.element_ids.get(element);
-                    const boxes = {
-                        left: { left: left - thickness, right: left, top, bottom },
-                        right: { left: right, right: right + thickness, top, bottom },
-                        top: { left: left - thickness, right: right + thickness, top: top - thickness, bottom: top },
-                        bottom: { left: left - thickness, right: right + thickness, top: bottom, bottom: bottom + thickness },
-                    };
-                    Object.entries(boxes).forEach(([side, box]) => {
-                        if (!intersects({ ...box, width: box.right - box.left, height: box.bottom - box.top }, viewport)) return;
-                        lines.push({ id: `box-out-of-bounds-${id}-${idx}-${side}`, box });
-                    });
-                });
-            });
-
-            const existing = new Map([...collection.children].map(element => [element.id, element]));
-            const added = document.createDocumentFragment();
-            lines.forEach(({ id, box }) => {
-                const div = existing.get(id) || document.createElement('div');
-                existing.delete(id);
-                div.id = id;
-                div.classList.add('box');
-                const properties = { '--tl-x': box.left, '--tl-y': box.top, '--br-x': box.right, '--br-y': box.bottom };
-                Object.entries(properties).forEach(([key, value]) => {
-                    const pixels = `${value}px`;
-                    if (div.style.getPropertyValue(key) !== pixels) div.style.setProperty(key, pixels);
-                });
-                if (!div.parentNode) added.appendChild(div);
-            });
-            existing.forEach(element => element.remove());
-            collection.appendChild(added);
-            collection.classList.toggle('show', lines.length > 0);
+            if (!controls.classList.contains('show')) return;
+            const active = () => controls.matches(':hover') ||
+                controls.classList.contains('dragging-slider') || controls.classList.contains('zooming');
+            if (active()) {
+                set_zoom_panel_minimized(false);
+                return;
+            }
+            state.collapse_timeout = setTimeout(() => {
+                state.collapse_timeout = null;
+                if (document.getElementById('minimal-zoom-options').checked || !active()) {
+                    set_zoom_panel_minimized(true);
+                }
+            }, 500);
         }
 
+        function activate_zoom_panel() {
+            const controls = document.getElementById('view-controls');
+            controls.addEventListener('mouseenter', update_zoom_panel);
+            controls.addEventListener('mouseleave', update_zoom_panel);
+        }
+
+        function check_the_checkbox() {
+            const input = document.getElementById('minimal-zoom-options');
+            input.checked = !input.checked;
+            set_zoom_panel_minimized(input.checked);
+            update_zoom_panel();
+        }
+
+        function clear_ui_info_laser_vision_box() {
+            const state = LASER_VISION_UI_INFO_STATE;
+            cancelAnimationFrame(state.animation_frame);
+            clearTimeout(state.hide_timeout);
+            state.element?.classList.remove('laser-vision-ui-info-target-element');
+            state.element = null;
+            state.animation_frame = null;
+            state.hide_timeout = null;
+            const collection = document.getElementById('laser-vision-ui-info');
+            collection.classList.remove('show');
+            collection.replaceChildren();
+        }
 
         function draw_ui_info_laser_vision_box_around_element(element = null) {
-            const overlay = document.getElementById('laser-vision-overlay');
-            const collection = overlay.querySelector(`div#laser-vision-ui-info`);
-
-            if (collection === null) {
-                console.error('Could not find laser vision box group for ui info!');
-                return;
-            }
-
-            if (!element) {
-                element = document.querySelector('.laser-vision-ui-info-target-element');
-                if (element === null) return; // ui info box not initialized with target element yet
-            } else {
-                [...document.querySelectorAll('.laser-vision-ui-info-target-element')].forEach(item => {
-                    item.classList.remove('laser-vision-ui-info-target-element');
-                })
+            const state = LASER_VISION_UI_INFO_STATE;
+            const collection = document.getElementById('laser-vision-ui-info');
+            if (element && state.element !== element) {
+                state.element?.classList.remove('laser-vision-ui-info-target-element');
+                state.element = element;
                 element.classList.add('laser-vision-ui-info-target-element');
             }
-
-            const visible = () => {
-                if (!element.checkVisibility({ opacityProperty: true, visibilityProperty: true })) {
-                    return false;
-                }
-                const rect = element.getBoundingClientRect();
-                return (
-                    rect.top < window.innerHeight &&
-                    rect.bottom > 0 &&
-                    rect.left < window.innerWidth &&
-                    rect.right > 0
-                );
+            const target = state.element;
+            const fragments = target?.isConnected ? [...target.getClientRects()] : [];
+            if (!fragments.length || getComputedStyle(target).visibility !== 'visible') {
+                clear_ui_info_laser_vision_box();
+                return false;
             }
-
-            if (!visible()) {
-                console.warn('Drawing box around element that is not visible, probably fine lol', element);
-            }
-
-            const { left, top, width, height } = element.getBoundingClientRect();
-            const coords = (x, y) => ({ x, y });
-
-            const bottom = top + height;
-            const right = left + width;
-            const thickness = parseFloat(
-                getComputedStyle(collection)
-                    .getPropertyValue('--thickness')
-                    .simplify()
-                    .replace('px', '')
-            );
-
-            // console.log('Looking at element: ', element, 'and these values...', {
-            //     left, top, bottom, right, width, height, thickness
-            // });
-
-            const corners = {
-                tl: coords(left, top),
-                tr: coords(right, top),
-                bl: coords(left, bottom),
-                br: coords(right, bottom)
-            };
-
-            const boxes = {
-                left: { tl: coords(left - thickness, top), br: coords(left, bottom) },
-                right: { tl: coords(right, top), br: coords(right + thickness, bottom) },
-                top: { tl: coords(left - thickness, top - thickness), br: coords(right + thickness, top) },
-                bottom: { tl: coords(left - thickness, bottom), br: coords(right + thickness, bottom + thickness) },
-            };
-
-            Object.entries(boxes).forEach(entry => {
-                const [side, box] = entry;
-                const { tl, br } = box;
-                const id = `box-ui-info-${side}`;
-                const exists = document.getElementById(id) !== null;
-
-                const div = exists ? document.getElementById(id) : document.createElement('div');
-                if (!div.classList.contains('box')) {
-                    div.classList.add('box');
-                    div.id = id;
-                }
-
-                div.style.setProperty('--tl-x', `${tl.x}px`);
-                div.style.setProperty('--tl-y', `${tl.y}px`);
-                div.style.setProperty('--br-x', `${br.x}px`);
-                div.style.setProperty('--br-y', `${br.y}px`);
-
-                if (!exists) {
-                    collection.appendChild(div);
-                }
+            const thickness = Math.max(0, parseFloat(getComputedStyle(collection).getPropertyValue('--thickness')) || 1);
+            const existing = new Map([...collection.children].map(box => [box.id, box]));
+            const added = document.createDocumentFragment();
+            fragments.forEach((rect, index) => {
+                const { left, right, top, bottom } = rect;
+                if (right < 0 || bottom < 0 || left > innerWidth || top > innerHeight) return;
+                const boxes = {
+                    left: [left - thickness, top, left, bottom],
+                    right: [right, top, right + thickness, bottom],
+                    top: [left - thickness, top - thickness, right + thickness, top],
+                    bottom: [left - thickness, bottom, right + thickness, bottom + thickness],
+                };
+                Object.entries(boxes).forEach(([side, coords]) => {
+                    const id = `box-ui-info-${side}${index ? `-${index}` : ''}`;
+                    const box = existing.get(id) ?? document.createElement('div');
+                    existing.delete(id);
+                    box.id = id;
+                    box.classList.add('box');
+                    ['--tl-x', '--tl-y', '--br-x', '--br-y'].forEach((property, coordinate) => {
+                        const value = `${coords[coordinate]}px`;
+                        if (box.style.getPropertyValue(property) !== value) box.style.setProperty(property, value);
+                    });
+                    if (!box.parentNode) added.appendChild(box);
+                });
             });
+            existing.forEach(box => box.remove());
+            collection.appendChild(added);
+            return true;
         }
 
         function activate_section_navigation() {
@@ -2617,6 +2420,28 @@
             const list = document.getElementById('section-navigation-list');
             let hide_timeout = null;
             let fadeout_timeout = null;
+
+            const update_highlight = () => {
+                const state = LASER_VISION_UI_INFO_STATE;
+                state.animation_frame = null;
+                if (draw_ui_info_laser_vision_box_around_element()) {
+                    state.animation_frame = requestAnimationFrame(update_highlight);
+                }
+            };
+            const show_highlight = element => {
+                const state = LASER_VISION_UI_INFO_STATE;
+                clearTimeout(state.hide_timeout);
+                state.hide_timeout = null;
+                if (!draw_ui_info_laser_vision_box_around_element(element)) return;
+                document.getElementById('laser-vision-ui-info').classList.add('show');
+                if (state.animation_frame === null) state.animation_frame = requestAnimationFrame(update_highlight);
+            };
+            const hide_highlight = () => {
+                const state = LASER_VISION_UI_INFO_STATE;
+                document.getElementById('laser-vision-ui-info').classList.remove('show');
+                clearTimeout(state.hide_timeout);
+                state.hide_timeout = setTimeout(clear_ui_info_laser_vision_box, 1963);
+            };
 
             const update_sections = () => {
                 const entries = [
@@ -2636,25 +2461,8 @@
                     button.onclick = () => {
                         zoom_to_fit(entry.name);
                     };
-                    button.addEventListener('mouseenter', () => {
-                        const sections = [...document.getElementById('main').querySelectorAll('div.section')];
-                        const matching = sections.find(section => {
-                            const title = section?.querySelector('div.title')?.innerText?.simplify();
-                            if (typeof title === 'string' && !title.empty() && title === entry?.title?.simplify()) {
-                                return true;
-                            }
-                            return false;
-                        });
-                        if (matching === null) {
-                            console.log('Somehow could not find matching section??? What??', entry.title);
-                            return;
-                        }
-                        document.getElementById('laser-vision-ui-info').classList.add('show');
-                        draw_ui_info_laser_vision_box_around_element(matching);
-                    });
-                    button.addEventListener('mouseleave', () => {
-                        document.getElementById('laser-vision-ui-info').classList.remove('show');
-                    });
+                    button.addEventListener('mouseenter', () => show_highlight(document.getElementById(entry.name)));
+                    button.addEventListener('mouseleave', hide_highlight);
                     return button;
                 }));
             };
@@ -2672,6 +2480,7 @@
                 if (!was_open) update_sections();
             };
             const close = () => {
+                hide_highlight();
                 clearTimeout(hide_timeout);
                 fadeout_timeout = setTimeout(() => {
                     fadeout_timeout = null;
@@ -2682,8 +2491,8 @@
                         hide_timeout = null;
                         if (!navigation.matches(':hover')) navigation.classList.remove('open');
                         navigation.classList.remove('fading-out');
-                    }, 855);
-                }, 1000);
+                    }, 455);
+                }, 500);
             };
             navigation.addEventListener('mouseenter', open);
             navigation.addEventListener('mouseleave', close);
@@ -2908,11 +2717,6 @@
             main.classList.add('unselectable');
             main.classList.remove('byebye');
 
-            document.getElementById('four-box-overlay').classList.add('frosted-area-grabbable');
-            setTimeout(() => {
-                document.getElementById('blur-filter').classList.add('enabled');
-            }, 1000);
-
             ZOOM_SCROLLWHEL_STATE.active = true;
         }
 
@@ -2922,42 +2726,20 @@
             const button = document.createElement('button');
             button.id = 'screenshot-button';
             button.onclick = async () => {
-                let timeout = null;
+                if (button.disabled) return;
                 button.disabled = true;
                 button.textContent = 'Cooking your inventory at 350°F...';
+                const main = document.getElementById('main');
                 try {
-                    if (timeout) {
-                        console.log('Screenshot in progress, ignoring...');
-                        button.textContent = 'Please wait...';
-                        return;
-                    }
-                    const main = document.getElementById('main');
-                    if (!main.classList.contains('it-has-stuff')) {
-                        console.warn('It doesn\'t have stuff??? how ????? ? ? ??');
-                    }
                     main.classList.add('force-zoom');
-                    timeout = setTimeout(async () => {
-                        try {
-                            await render_element_as_png('main');
-                        } catch (error) {
-                            console.log('Error in inner-timeout for element render:', error);
-                        } finally {
-                            setTimeout(() => {
-                                main.classList.add('back-from-force-zoom');
-                                main.classList.remove('force-zoom');
-                                setTimeout(() => {
-                                    main.classList.remove('back-from-force-zoom');
-                                    button.disabled = false;
-                                    button.textContent = default_text;
-                                    timeout = null; // ok now it's safe...
-                                }, 650);
-                            }, 150);
-                        }
-                    }, 750);
+                    await render_element_as_png('main');
                 } catch (error) {
                     console.error(error);
                     alert(error.message);
                 } finally {
+                    main.classList.remove('force-zoom');
+                    button.disabled = false;
+                    button.textContent = default_text;
                 }
             };
             button.innerText = default_text;
@@ -3081,6 +2863,7 @@
             layer.id = 'pan-layer';
             main.before(layer);
             layer.appendChild(main);
+            observe_pan_layer_bounds();
             const pan = PANNING_STATE;
             let drag = null;
 
@@ -3228,24 +3011,45 @@
             window.addEventListener('blur', () => stop());
         }
 
+        function activate_items_per_row() {
+            const minus = document.getElementById('items-per-row-minus');
+            const plus = document.getElementById('items-per-row-plus');
+            const label = document.getElementById('items-per-row-display');
+            const css = '--items-per-row';
+            let items = get_dogdata_from_localstorage().dimensions[css];
+            const update = () => {
+                document.documentElement.style.setProperty(css, String(items));
+                label.textContent = String(items);
+                minus.disabled = items === 1;
+            };
+            update();
+            for (const [button, direction] of [[minus, -1], [plus, 1]]) {
+                button.addEventListener('click', () => {
+                    stop_automatic_view();
+                    items = Math.max(1, items + direction);
+                    update();
+                    const dogdata = get_dogdata_from_localstorage();
+                    dogdata.dimensions[css] = items;
+                    update_dogdata_in_localstorage(dogdata);
+                    center_panning();
+                });
+            }
+        }
+
         function activate_sliders() {
+            activate_items_per_row();
             console.log('Activate sliders!');
             const controls = document.getElementById('view-controls');
             let adjustment = null;
             const fit_view = () => zoom_to_fit();
             const sliders = {
-                width: {
-                    element: document.getElementById('slider-width'),
-                    label: 'slider-label-width',
-                    css: '--stuff-width',
-                },
                 height: {
                     element: document.getElementById('slider-height'),
                     label: 'slider-label-height',
                     css: '--stuff-height',
                 },
             };
-            [sliders.width, sliders.height].forEach(slider => {
+            [sliders.height].forEach(slider => {
                 const label = document.getElementById(slider.label);
                 label.innerText = getComputedStyle(document.documentElement).getPropertyValue(slider.css).trim();
                 console.log('Adding event listener to slider', slider);
@@ -3259,10 +3063,9 @@
                     document.documentElement.style.cursor = 'grabbing';
                     controls.classList.add('dragging-slider');
                     document.documentElement.classList.add('disable-interactions');
+                    update_zoom_panel();
 
-                    const main = document.getElementById('main');
                     const adjusting = document.getElementById('adjusting-message');
-                    main.classList.add('adjusting');
                     adjusting.classList.add('show');
 
                     const computed = window.getComputedStyle(slider.element);
@@ -3297,7 +3100,7 @@
                         document.documentElement.style.cursor = 'auto';
                         document.documentElement.classList.remove('disable-interactions');
                         controls.classList.remove('dragging-slider');
-                        main.classList.remove('adjusting');
+                        update_zoom_panel();
                         adjusting.classList.remove('show');
                         AUTOMATIC_VIEW_STATE.held = false;
                         update_automatic_view(() => {
@@ -3367,7 +3170,7 @@
                     y: Math.round(window.innerHeight / 2),
                 };
                 const bounds = main.getBoundingClientRect();
-                const ratio = parseFloat(getComputedStyle(main).zoom) / prev.zoom;
+                const ratio = get_rendered_view().zoom / prev.zoom;
 
                 if (scrollwheel_initated) {
                     const mouse = {
@@ -3396,7 +3199,7 @@
                 update_automatic_view(() => {
                     const main = document.getElementById('main');
                     const prev = {
-                        zoom: parseFloat(getComputedStyle(main).zoom),
+                        zoom: get_rendered_view().zoom,
                         bounds: main.getBoundingClientRect(),
                     };
                     set_current_zoom(1);
@@ -3420,7 +3223,7 @@
                 const scale = () => {
                     const main = document.getElementById('main');
                     const prev = {
-                        zoom: parseFloat(getComputedStyle(main).zoom),
+                        zoom: get_rendered_view().zoom,
                         bounds: main.getBoundingClientRect(),
                     }
                     const initial_additional = additional;
@@ -3439,6 +3242,7 @@
 
                 const stop = () => {
                     console.log('Stopping zoom...');
+                    const was_zooming = controls.classList.contains('zooming');
                     clearInterval(interval);
                     interval = null;
                     additional = null;
@@ -3447,6 +3251,7 @@
                     document.documentElement.style.cursor = 'auto';
                     document.documentElement.classList.remove('disable-interactions');
                     controls.classList.remove('zooming');
+                    if (was_zooming) update_zoom_panel();
                 };
 
                 const start = evt => {
@@ -3472,137 +3277,12 @@
                         }
                     })());
                     document.documentElement.classList.add('disable-interactions');
+                    if (controls.classList.contains('zooming')) update_zoom_panel();
                     window.addEventListener('mouseup', stop);
                 }
 
                 element.addEventListener('mousedown', start);
             };
-        }
-
-        function set_up_border_box_overlay() {
-            const container = document.getElementById('pan-layer');
-            let animation_frame = null;
-            let outline_thickness = null;
-
-            const overlay = {
-                wrapper: document.getElementById('four-box-overlay'),
-                _top: null,
-                _bottom: null,
-                _left: null,
-                _right: null,
-                get top() {
-                    if (this._top === null) {
-                        this._top = this.wrapper.querySelector('#box-top');
-                    }
-                    return this._top;
-                },
-                get bottom() {
-                    if (this._bottom === null) {
-                        this._bottom = this.wrapper.querySelector('#box-bottom');
-                    }
-                    return this._bottom;
-                },
-                get left() {
-                    if (this._left === null) {
-                        this._left = this.wrapper.querySelector('#box-left');
-                    }
-                    return this._left;
-                },
-                get right() {
-                    if (this._right === null) {
-                        this._right = this.wrapper.querySelector('#box-right');
-                    }
-                    return this._right;
-                },
-            };
-
-            const callback = function () {
-                const { top, bottom, left, right } = container.getBoundingClientRect();
-
-                const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-
-                const sizes = {
-                    top: clamp(top, 0, window.innerHeight),
-                    bottom: clamp(window.innerHeight - bottom, 0, window.innerHeight),
-                    left: clamp(left, 0, window.innerWidth),
-                    right: clamp(window.innerWidth - right, 0, window.innerWidth),
-                    get sides() {
-                        return Math.max(0, window.innerHeight - this.top - this.bottom);
-                    }
-                }
-
-                const set = (key, value) => {
-                    overlay.wrapper.style.setProperty(`--${key}`, `${value}px`);
-                }
-
-                set('top-height', sizes.top);
-                set('bottom-height', sizes.bottom);
-                set('left-width', sizes.left);
-                set('right-width', sizes.right);
-
-                set('sides-height', sizes.sides);
-
-                const thickness = parseFloat(getComputedStyle(overlay.wrapper.querySelector('#outline-top')).height) || 0;
-                outline_thickness = thickness;
-                const outline_top = clamp(top - thickness, 0, window.innerHeight);
-                const outline_bottom = clamp(bottom + thickness, 0, window.innerHeight);
-                const visible = right > 0 && left < window.innerWidth && bottom > 0 && top < window.innerHeight;
-
-                const outline = {
-                    'top-bottom-width': visible ? Math.max(0, window.innerWidth - sizes.left - sizes.right) : 0,
-                    'sides-height': visible ? Math.max(0, outline_bottom - outline_top) : 0,
-                    'top-distance-from-top': top - thickness,
-                    'top-distance-from-left': sizes.left,
-                    'bottom-distance-from-bottom': window.innerHeight - bottom - thickness,
-                    'bottom-distance-from-right': sizes.right,
-                    'left-distance-from-top': outline_top,
-                    'left-distance-from-left': left - thickness,
-                    'right-distance-from-bottom': window.innerHeight - outline_bottom,
-                    'right-distance-from-right': window.innerWidth - right - thickness,
-                }
-
-                Object.entries(outline).forEach(entry => {
-                    const [key, value] = entry;
-                    set(`outline-${key}`, value);
-                });
-
-                draw_ui_info_laser_vision_box_around_element();
-                draw_laser_vision_out_of_bounds_lines();
-            }
-
-            function tick() {
-                callback();
-                animation_frame = container.getAnimations({ subtree: true }).length ? requestAnimationFrame(tick) : null;
-            }
-
-            function start() {
-                if (animation_frame === null) {
-                    animation_frame = requestAnimationFrame(tick);
-                }
-            }
-
-            container.addEventListener('transitionrun', start);
-            container.addEventListener('animationstart', start);
-            container.addEventListener('load', start, true);
-            window.addEventListener('resize', callback);
-            document.fonts.ready.then(callback);
-
-            const observer = new MutationObserver(callback);
-            observer.observe(container, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                characterData: true
-            });
-            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'] });
-            new MutationObserver(() => {
-                const thickness = parseFloat(getComputedStyle(overlay.wrapper.querySelector('#outline-top')).height) || 0;
-                if (thickness !== outline_thickness) callback();
-            }).observe(overlay.wrapper, { attributes: true, attributeFilter: ['style', 'class'] });
-            new ResizeObserver(callback).observe(container);
-            callback();
-
-            console.log('Mutation observer and animation frame callbacks have been set up!');
         }
 
         function process(data) {
@@ -3620,7 +3300,22 @@
             get_removed_items_from_local_storage();
             update_removed_sections_list();
 
-            set_up_border_box_overlay();
+            zoom_to_fit();
+            const initial_view = {
+                update_id: AUTOMATIC_VIEW_STATE.update_id,
+                zoom: get_current_zoom(true),
+                pan: { ...PANNING_STATE },
+            };
+            // fit after images load
+            Promise.allSettled([
+                document.fonts.ready,
+                ...get_visible_sections().flatMap(section => [...section.querySelectorAll('img')]).map(image => image.decode()),
+            ]).then(() => {
+                if (AUTOMATIC_VIEW_STATE.update_id !== initial_view.update_id ||
+                    get_current_zoom(true) !== initial_view.zoom ||
+                    PANNING_STATE.x !== initial_view.pan.x || PANNING_STATE.y !== initial_view.pan.y) return;
+                zoom_to_fit();
+            });
             document.getElementById('introduction-page-buttons').remove(); // bye butttonss
 
             setTimeout(() => {
@@ -3630,6 +3325,7 @@
                 const controls = document.getElementById('view-controls');
                 controls.classList.add('initially-not-transparent');
                 controls.classList.add('show');
+                update_zoom_panel();
                 const checkbox = document.getElementById('bottom-left-checkbox-thing');
                 checkbox.classList.remove('invisible');
                 const activator = () => {
@@ -3706,6 +3402,7 @@
 
             activate_sliders();
             activate_zoom();
+            activate_zoom_panel();
             activate_panning_and_scrollwheel_zooming();
             activate_section_navigation();
 
