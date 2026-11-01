@@ -299,6 +299,7 @@
                         left: 0px;
                         top: -6px;
                         pointer-events: none;
+                        color: white;
                         background-color: black;
                 }
         `;
