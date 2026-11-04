@@ -634,7 +634,7 @@
             position: relative;
             width: var(--width);
             left: var(--left);
-            max-height: 110px;
+            max-height: 200px;
             min-height: 110px;
             padding-left: 8px;
 
@@ -986,7 +986,7 @@
         return stats;
     };
 
-    // Add each new loot drop to saved loot data, grouped by the enemy that dropped it.
+    // add each new loot drop to saved loot data, grouped by the enemy that dropped it.
     const process_loot_drop = (loot, enemyName) => {
         const stats = get_session_stats();
         const sourceEnemy = typeof enemyName === 'string' && enemyName.trim() !== ''
@@ -1539,39 +1539,18 @@
             }
         }
 
-        const mob_replaced = (
+        const died = (
             !advanced &&
             same_tile &&
-            prev?.['visible'] &&
-            prev['hp'] > 0 &&
-            curr['visible'] &&
-            curr['hp'] > 0 &&
-            (prev['name'] !== curr['name'] || prev['image'] !== curr['image'])
-        );
-        const action_targeted_previous_enemy = (
-            action?.enemy !== null &&
-            action?.enemy !== undefined &&
-            (
-                (prev?.['name'] != null && action.enemy.name === prev['name']) ||
-                (prev?.['image'] != null && action.enemy.image === prev['image'])
-            )
-        );
-        const died = (
-            (!advanced && same_tile && prev?.['hp'] > 0 && curr['hp'] === 0) ||
-            (
-                mob_replaced &&
-                weapon !== 'Trickster Donut' &&
-                !effects?.banish &&
-                action_targeted_previous_enemy
-            )
+            prev?.['hp'] > 0 &&
+            curr['hp'] === 0
         );
 
         if (died) {
             const enemyName = typeof prev['name'] === 'string' && prev['name'].trim() !== ''
                 ? prev['name'].trim()
                 : image_to_name(prev['image']) ?? 'Unknown enemy';
-            const session = get_session_stats();
-            session.slain++;
+            get_session_stats().slain++;
             increment_enemy_kills(enemyName);
             update_current_enemy_in_queue(prev['name'], prev['image'], 0, curr['maxHp'] ?? prev['maxHp']);
             mark_enemy_removal_pending();
@@ -1928,15 +1907,6 @@
         const set_value = (key, value) => {
             if (!instance.is_current()) return;
             CACHE.get('user_options')[key] = value;
-            if (
-                key === 'foreverloot' &&
-                value !== true &&
-                CACHE.get('state')?.['active'] !== true
-            ) {
-                const session = get_session_stats();
-                session.loot.length = 0;
-                session.enemy_kills = {};
-            }
             const bindings = document.getElementById('tower-keyboard-bindings');
             if (bindings) bindings.disabled = CACHE.get('user_options').keyboard !== true;
             localstorage_save();
@@ -2534,11 +2504,6 @@
 
         if (restored_active === false) {
             clear_tower_tracking();
-        } else if (restored_active !== true && !CACHE.get('user_options')?.['foreverloot']) {
-            const session = get_session_stats();
-            session.loot.length = 0;
-            session.enemy_kills = {};
-            localstorage_save();
         }
 
         patch_fetch();
