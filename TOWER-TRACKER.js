@@ -634,7 +634,7 @@
             position: relative;
             width: var(--width);
             left: var(--left);
-            max-height: 200px;
+            max-height: 110px;
             min-height: 110px;
             padding-left: 8px;
 
@@ -2502,9 +2502,7 @@
             typeof restored_raw?.['state'] === 'string' ? restored_raw['state'] === 'active' : null
         );
 
-        if (restored_active === false) {
-            clear_tower_tracking();
-        }
+        if (restored_active === false) clear_tower_tracking();
 
         patch_fetch();
 
