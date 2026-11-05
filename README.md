@@ -12,8 +12,7 @@ Track your queue and loot for dogonline.net when torment nexus-ing.
 - [To-Do](#to-do)
 - [Demonstration Video](#demonstration-video)
 
-If you find this tool useful, and you have an hourglass fish to spare... `H2N7E5A3` 🥺
-<br />OR MULTI DIMENSIONAL DICE &gt;&lt;
+If you find this tool useful, and you have a dog pop / pawpsicle to spare... `H2N7E5A3` 🥺
 
 ## Cute Splash Image
 
@@ -23,6 +22,8 @@ If you find this tool useful, and you have an hourglass fish to spare... `H2N7E5
 ### Via Tapermonkey
 
 <img width="1200" alt="image" src="https://github.com/user-attachments/assets/f14f0bac-83c3-49b9-98ca-12d280e50fa9" />
+
+Upgrading works the same, but just replace the entirety of the text with the latest version instead of making a new script.
 
 ### Via Console (F12)
 Copy the code in [TOWER-TRACKER.js](TOWER-TRACKER.js) using the button provided by GitHub:
@@ -34,6 +35,16 @@ Open [The Lonely Tower](https://dogonline.net/tower) on dogonline.net, press F12
 (Some browsers might require you to type `allow pasting` before doing so)
 
 ## Latest Updates
+**NEW 11/4/2026**<BR />
+Lots of QoL added in  commit [`c290444`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/c290444aa3730c1aca0bff169cb412c19f9eb9f9)!
+- Works in light mode now! (for real this time!!!)
+- Dogmatic Seal option added to options menu
+- Queue list automatically hides >= 100 enemies
+- Latest loot shows up at the top of the list so you don't have to keep scrolling
+- Tower Floor Select and Buttons now appear at the top of the webpage (added in commit [`f2cfcdf`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/f2cfcdfe0cd6d69206a3359c0d8d32eeee24923e), thank you amgg!)
+
+----
+
 **NEW 11/2/2026**<BR />
 Keyboard controls now integrated into the main tracker in commit [`77ace4c`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/77ace4c6f4bf37c419cee8a4777954aeec5046e8)!
 - Toggleable option
