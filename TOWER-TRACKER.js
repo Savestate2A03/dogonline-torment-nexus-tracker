@@ -2002,15 +2002,6 @@
         const set_value = (key, value) => {
             if (!instance.is_current()) return;
             CACHE.get('user_options')[key] = value;
-            if (
-                key === 'foreverloot' &&
-                value !== true &&
-                CACHE.get('state')?.['active'] !== true
-            ) {
-                const session = get_session_stats();
-                session.loot.length = 0;
-                session.enemy_kills = {};
-            }
             const bindings = document.getElementById('tower-keyboard-bindings');
             if (bindings) bindings.disabled = CACHE.get('user_options').keyboard !== true;
             localstorage_save();
@@ -2639,14 +2630,7 @@
             typeof restored_raw?.['state'] === 'string' ? restored_raw['state'] === 'active' : null
         );
 
-        if (restored_active === false) {
-            clear_tower_tracking();
-        } else if (restored_active !== true && !CACHE.get('user_options')?.['foreverloot']) {
-            const session = get_session_stats();
-            session.loot.length = 0;
-            session.enemy_kills = {};
-            localstorage_save();
-        }
+        if (restored_active === false) clear_tower_tracking();
 
         patch_fetch();
 
