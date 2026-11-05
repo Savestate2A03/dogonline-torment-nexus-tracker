@@ -1013,8 +1013,8 @@
             stats.enemy_kills = {};
         }
         for (const item of stats.loot) {
-            if (item !== null && typeof item === 'object' && !Number.isFinite(item.time)) {
-                item.time = Date.now();
+            if (!Object.hasOwn(item, 'time')) {
+                item['time'] = Date.now();
             }
         }
         stats.loot.sort((a, b) =>
