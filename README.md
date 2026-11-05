@@ -42,6 +42,7 @@ Lots of QoL added in  commit [`c290444`](https://github.com/Savestate2A03/dogonl
 - Queue list automatically hides >= 100 enemies
 - Latest loot shows up at the top of the list so you don't have to keep scrolling
 - Tower Floor Select and Buttons now appear at the top of the webpage (added in commit [`f2cfcdf`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/f2cfcdfe0cd6d69206a3359c0d8d32eeee24923e), thank you amgg!)
+- Option in menu added to allow disabled weapon presses to advance text (added in commit [`4abaae0`](https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/commit/4abaae0dffcdf7fd19a36a8ec69fd348fdf7d20c))
 
 ----
 

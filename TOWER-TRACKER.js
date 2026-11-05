@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torment Nexus Tracker
 // @namespace    http://tampermonkey.net/
-// @version      2026-11-03
+// @version      2026-11-05
 // @description  Torment Nexus Tracker
 // @author       Rei Wolf (aka Estradiol aka Savestate)
 // @match        https://*.dogonline.net/*
@@ -13,7 +13,7 @@
     // store data on window
     const CACHE_KEY = '__DOG_DATA_TOWER_QUEUE_WINDOW_KEY__';
     // increase anytime the localStorage schema changes
-    const TRACKER_VERSION = 3;
+    const TRACKER_VERSION = 4;
     const LOCALSTORAGE_VERSION_KEY = '__SAVED_TOWER_TRACKER_VERSION__';
     const INSTANCE_KEY = '__DOGONLINE_TOWER_TRACKER_INSTANCE__';
     const get_saved_tracker_version = () => {
@@ -228,6 +228,22 @@
             gap: 6px;
             justify-content: flex-start;
             align-items: center;
+            &.disabled {
+                --options-text: #777;
+                pointer-events: none;
+                .tower-option-list-item-label {
+                    color: var(--options-text);
+                }
+                .tower-option-list-item-input {
+                    &[type="checkbox"] {
+                        &:checked {
+                            &::before {
+                                color: var(--options-text);
+                            }
+                        }
+                    }
+                }
+            }
         }
         .tower-option-list-item-input {
             &[type="checkbox"] {
@@ -1968,7 +1984,7 @@
             options = {};
             CACHE.set('user_options', options);
         }
-        for (const [key, value] of Object.entries({ scrolling: false, congo: true, foreverloot: false, keyboard: false, dogmaticseal: true })) {
+        for (const [key, value] of Object.entries({ scrolling: false, congo: true, foreverloot: false, keyboard: false, dogmaticseal: true, hidewhenbig: true, disabledweaponsadvancestext: false, })) {
             if (typeof options[key] !== 'boolean') options[key] = value;
         }
         if (!options.keyboard_bindings || typeof options.keyboard_bindings !== 'object' || Array.isArray(options.keyboard_bindings)) options.keyboard_bindings = {};
@@ -2002,13 +2018,22 @@
         const set_value = (key, value) => {
             if (!instance.is_current()) return;
             CACHE.get('user_options')[key] = value;
-            const bindings = document.getElementById('tower-keyboard-bindings');
-            if (bindings) bindings.disabled = CACHE.get('user_options').keyboard !== true;
+            update_keyboard_options();
             localstorage_save();
             update_mob_queue_css_variables();
             window.dispatchEvent(new Event('tower-tracker-options-changed'));
         };
         const get_value = key => CACHE.get('user_options')[key];
+        const update_keyboard_options = () => {
+            const disabled = get_value('keyboard') !== true;
+            const bindings = options.querySelector('#tower-keyboard-bindings');
+            if (bindings) bindings.disabled = disabled;
+            const input = options.querySelector('input[name="disabledweaponsadvancestext"]');
+            if (input) {
+                input.disabled = disabled;
+                input.closest('.tower-option-list-item').classList.toggle('disabled', disabled);
+            }
+        };
 
         let currently_expanded = false;
 
@@ -2017,6 +2042,11 @@
             option('Queue of enemies behind door', 'congo', TOWER_OPTION_TYPES.CHECKBOX, set_value),
             option('Persist loot between sessions', 'foreverloot', TOWER_OPTION_TYPES.CHECKBOX, set_value),
             option('Using Dogmatic Seal', 'dogmaticseal', TOWER_OPTION_TYPES.CHECKBOX, set_value),
+            option('Hide queue when >= 100 enemies', 'hidewhenbig', TOWER_OPTION_TYPES.CHECKBOX, (key, value) => {
+                set_value(key, value);
+                mob_queue_info_update();
+            }),
+            option('Disabled weapons advances text', 'disabledweaponsadvancestext', TOWER_OPTION_TYPES.CHECKBOX, set_value),
             option('Keyboard controls', 'keyboard', TOWER_OPTION_TYPES.CHECKBOX, set_value),
         ];
 
@@ -2056,7 +2086,9 @@
                     input.classList.add('tower-option-list-item-input-checkbox');
                     input.name = selection.key;
                     input.checked = get_value(selection.key);
-                    input.onchange = evt => selection.callback(selection.key, evt.target.checked);
+                    input.onchange = evt => {
+                        if (!evt.target.disabled) selection.callback(selection.key, evt.target.checked);
+                    };
                     break;
                 case TOWER_OPTION_TYPES.MULTISELECT:
                     // eventually
@@ -2162,6 +2194,7 @@
         wrapper.appendChild(list);
         options.appendChild(wrapper);
         document.body.appendChild(options);
+        update_keyboard_options();
     };
 
     const create_tower_stats = () => {
@@ -2240,7 +2273,7 @@
             too_big_indicator.innerHTML = 'Your queue size is &gt;&equals; 100!<br />Hiding the queue to save on resources...';
         }
 
-        const too_big = enemies.length >= 100;
+        const too_big = enemies.length >= 100 && (CACHE.get('user_options')?.['hidewhenbig'] ?? true);
         if (too_big) {
             if (!queue.classList.contains('too-big')) {
                 queue.classList.add('too-big');
@@ -2454,7 +2487,7 @@
                 }
             } finally {
                 // finish only the matching action
-                const banish_resolved = item?.['name'] === 'Flowering Sakura Stick' && action?.effects.banish;
+                const banish_resolved = (item?.['name'] === 'Very Cool Stick' || item?.['name'] ===  'Even Cooler Stick' || item?.['name'] === 'Flowering Sakura Stick') && action?.effects.banish;
                 if (action !== null && pending_weapon_use === action && (!state['resolving_weapon_use'] || banish_resolved)) {
                     CACHE.assign('tracking', { pending: null });
                     pending_weapon_use = null;
@@ -3299,7 +3332,8 @@
         }
 
         function keypress(event) {
-            if (!instance.is_current()) return;
+            const user_options = window[CACHE_KEY]?.user_options;
+            if (!instance.is_current() || user_options?.keyboard !== true) return;
             if (
                 event.defaultPrevented ||
                 event.isComposing ||
@@ -3339,7 +3373,15 @@
             const binding = bindings().get(key);
             if (!binding) return;
             if (binding.type === "select") level_select(event, binding.element);
-            else if (binding.guard && !available(binding.guard)) process(event);
+            else if (
+                user_options.disabledweaponsadvancestext === true &&
+                KEYS.WEAPONS.includes(key) && binding.element && binding.guard &&
+                has_class(binding.guard, "tower_tuiCombatItems") &&
+                has_class(binding.guard, "tower_disabled") && visible(binding.guard)
+            ) {
+                process(event);
+                binding.guard.click();
+            } else if (binding.guard && !available(binding.guard)) process(event);
             else activate(event, binding.element);
             request_indicators();
         }
