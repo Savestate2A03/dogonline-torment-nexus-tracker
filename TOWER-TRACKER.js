@@ -2341,14 +2341,12 @@
                 if (!lootByEnemy.has(enemy)) lootByEnemy.set(enemy, []);
                 lootByEnemy.get(enemy).push(entry);
             }
-            const sortedLootByEnemy = [...lootByEnemy].sort(([enemyA], [enemyB]) => {
-                const killsA = Number.isSafeInteger(session.enemy_kills[enemyA])
-                    ? session.enemy_kills[enemyA]
-                    : 0;
-                const killsB = Number.isSafeInteger(session.enemy_kills[enemyB])
-                    ? session.enemy_kills[enemyB]
-                    : 0;
-                return killsB - killsA || enemyA.localeCompare(enemyB);
+            const sortedLootByEnemy = [...lootByEnemy].sort(([enemyA, entriesA], [enemyB, entriesB]) => {
+                const latestDropA = entriesA.reduce((latest, entry) =>
+                    Math.max(latest, Number.isFinite(entry.time) ? entry.time : 0), 0);
+                const latestDropB = entriesB.reduce((latest, entry) =>
+                    Math.max(latest, Number.isFinite(entry.time) ? entry.time : 0), 0);
+                return latestDropB - latestDropA || enemyA.localeCompare(enemyB);
             });
             for (const [enemy, entries] of sortedLootByEnemy) {
                 entries.sort((entryA, entryB) =>
