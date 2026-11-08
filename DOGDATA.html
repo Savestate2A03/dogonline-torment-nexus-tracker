@@ -37,6 +37,8 @@
             --color-button-background-hover: #13733f;
             --color-button-border: #0f6b3a;
             --color-button-border-hover: #0b5530;
+            --color-button-background-disabled: #559372;
+            --color-button-border-disabled: #386b50;
             --color-adjustment-message-background: var(--color-button-border-hover);
             --color-adjustment-message-border: #38d848;
             --color-text: #e8eeff;
@@ -222,12 +224,16 @@
             right: 16px;
             transition: bottom 0.5s ease-in-out;
             z-index: var(--z-index-overlay-menus);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
 
             * {
                 box-sizing: border-box;
             }
 
-            button#screenshot-button {
+            button#screenshot-button,
+            button#copy-to-clipboard-button {
                 font-family: 'NDS', 'Courier New', Courier, sans-serif;
                 background-color: var(--color-button-background);
                 display: inline-flex;
@@ -253,16 +259,39 @@
                 box-shadow: 4px 4px 4px var(--color-shadow);
             }
 
-            button#screenshot-button:hover {
+            button#screenshot-button:enabled:hover,
+            button#copy-to-clipboard-button:enabled:hover {
                 background-color: var(--color-button-background-hover);
                 border-color: var(--color-button-border-hover);
                 cursor: pointer;
             }
 
-            button#screenshot-button:active {
+            button#screenshot-button:enabled:active,
+            button#copy-to-clipboard-button:enabled:active {
                 top: 2px;
                 left: 2px;
                 box-shadow: 2px 2px 1px var(--color-shadow);
+            }
+
+            button#screenshot-button:disabled,
+            button#copy-to-clipboard-button:disabled {
+                background-color: var(--color-button-background-disabled);
+                border-color: var(--color-button-border-disabled);
+                cursor: default;
+            }
+
+            button#screenshot-button:disabled:hover,
+            button#copy-to-clipboard-button:disabled:hover {
+                background-color: var(--color-button-background-disabled);
+                border-color: var(--color-button-border-disabled);
+                cursor: default;
+            }
+
+            button#screenshot-button:disabled:active,
+            button#copy-to-clipboard-button:disabled:active {
+                background-color: var(--color-button-background-disabled);
+                border-color: var(--color-button-border-disabled);
+                cursor: default;
             }
 
             #section-removed-sections {
@@ -1500,8 +1529,8 @@
 
     <!-- IMPORTANT FOR FUTURE UPGRADES OF PREVIOUSLY STORED LOCALSTORAGE DATA -->
     <script>
-        const CURRENT_DOGDATA_VERSION = 'v1.0.2';
-        const ALL_DOGDATA_VERSIONS = Object.freeze(['v1.0.0', 'v1.0.1', 'v1.0.2', /* 'v2.0.0', 'v2.0.0-hotfix', etc */]);
+        const CURRENT_DOGDATA_VERSION = 'v1.0.3';
+        const ALL_DOGDATA_VERSIONS = Object.freeze(['v1.0.0', 'v1.0.1', 'v1.0.2', 'v1.0.3', /* 'v2.0.0', 'v2.0.0-hotfix', etc */]);
         const DOGDATA_LOCALSTORAGE_KEY = 'DOGDATA';
 
         const ATTRIBUTE_DEFAULTS = value => ({
@@ -1510,6 +1539,14 @@
             enumerable: true,
             configurable: true,
         });
+
+        const delay = callback => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    callback();
+                });
+            });
+        }
 
         function normalize_dogdata_dimensions(dogdata) {
             let updated = false;
@@ -1551,6 +1588,11 @@
                 dogdata.version = 'v1.0.2';
             },
 
+            v1_0_2__to__v1_0_3: dogdata => {
+                // nothing to change besides the version number!
+                dogdata.version = 'v1.0.3';
+            },
+
             // -----------------------------------
             // the following upgrades aren't real,
             // and only exist for templating atm..
@@ -1576,7 +1618,9 @@
 
     <script>
         const KEY = '__DOG_DATA_WINDOW_KEY__';
-        const SCRIPT_TO_GET_DATA = 'await (async() => {\n    const WINDOW_KEY = \'__DOGONLINE_INVENTORY_INFO_TEMP_STORAGE_WINDOW_KEY__\';\n    const EMBEDDED_HTML_WRAPPER_CLASS = \'item-has-html-in-its-description-and-this-is-a-wrapper-to-indicate-such\';\n    const NON_CATEGORIES = [\'categories\', \'consumedByDog\', \'description\', \'count\', \'id\', \'image\', \'name\', \'price\'];\n    const PARSER = new DOMParser();\n\n    console.log(\'----------------------------------------------------------\');\n\n    const fetch_inventory = async () => {\n        console.warn(\'Current session does not have data pulled yet, attempting to do so now!\');\n        const url = \'https://dogonline.net/api/trpc/doghouse.getState,messages.list,toys.getActiveToyWidgets\';\n        const body = {\n            batch: 1,\n            input: {\n                \"0\": {\n                    \"json\": null,\n                    \"meta\": {\n                        \"values\": [\"undefined\"],\n                        \"v\": 1\n                    }\n                },\n                \"1\": {\n                    \"json\": null,\n                    \"meta\": {\n                        \"values\": [\"undefined\"],\n                        \"v\": 1\n                    }\n                },\n                \"2\": {\n                    \"json\": null,\n                    \"meta\": {\n                        \"values\": [\"undefined\"],\n                        \"v\": 1\n                    }\n                }\n            }\n        };\n        const cookie = \'__Secure-better-auth.session_token\';\n        const session = document.cookie.split(\"; \").find(row => row.startsWith(`${cookie}=`))?.split(\"=\")[1];\n        const headers = new Headers();\n        const qs = new URLSearchParams({\n            batch: String(body.batch),\n            input: JSON.stringify(body.input),\n        }).toString();\n        headers.set(\'Accept\', \'*/*\');\n        headers.set(\'Accept-Encoding\', \'gzip, deflate, br, zstd\');\n        headers.set(\'Accept-Language\', \'en-US,en;q=0.9\');\n        headers.set(\'Connection\', \'keep-alive\');\n        headers.set(\'Cookie\', `${cookie}=${session}`);\n\n        const request = {\n            url: `${url}?${qs}`,\n            body: {\n                method: \'GET\',\n                headers: headers\n            }\n        }\n\n        console.warn(\'Attempting to send request:\', request);\n        try {\n            const response = await fetch(request.url, request.body);\n            if (!response.ok) {\n                throw new Error(`Error fetching data from dogonline. Status: ${response.status}`);\n            }\n            console.log(\'Response recieved and was successful!\', response);\n            window[WINDOW_KEY][\'data\'] = await response.json();\n            console.log(`The fetched data can be viewed by typing the following into the browser console:\\n%cwindow.${WINDOW_KEY}.data`, \'font-family: monospace;\');\n        } catch (err) {\n            throw new Error(`Failed while attempting to fetch!`, err);\n        }\n    }\n\n    const fetch_closet = async () => {\n        console.warn(\'Current session does not have closet pulled yet, attempting to do so now!\');\n        const url = \'https://dogonline.net/api/trpc/dressup.getState\';\n        const body = {\n            batch: 1,\n            input: {\n                \"0\": {\n                    \"json\": { \"dogIndex\": null },\n                    \"meta\": {\n                        \"values\": { dogIndex: [\"undefined\"] },\n                        \"v\":1\n                    }\n                }\n            }\n        };\n        const cookie = \'__Secure-better-auth.session_token\';\n        const session = document.cookie.split(\"; \").find(row => row.startsWith(`${cookie}=`))?.split(\"=\")[1];\n        const headers = new Headers();\n        const qs = new URLSearchParams({\n            batch: String(body.batch),\n            input: JSON.stringify(body.input),\n        }).toString();\n        headers.set(\'Accept\', \'*/*\');\n        headers.set(\'Accept-Encoding\', \'gzip, deflate, br, zstd\');\n        headers.set(\'Accept-Language\', \'en-US,en;q=0.9\');\n        headers.set(\'Connection\', \'keep-alive\');\n        headers.set(\'Cookie\', `${cookie}=${session}`);\n\n        const request = {\n            url: `${url}?${qs}`,\n            body: {\n                method: \'GET\',\n                headers: headers\n            }\n        }\n\n        console.warn(\'Attempting to send request:\', request);\n        try {\n            const response = await fetch(request.url, request.body);\n            if (!response.ok) {\n                throw new Error(`Error fetching data from dogonline. Status: ${response.status}`);\n            }\n            console.log(\'Response recieved and was successful!\', response);\n            window[WINDOW_KEY][\'closet\'] = await response.json();\n            console.log(`The fetched data can be viewed by typing the following into the browser console:\\n%cwindow.${WINDOW_KEY}.closet`, \'font-family: monospace;\');\n        } catch (err) {\n            throw new Error(`Failed while attempting to fetch!`, err);\n        }\n    }\n\n    const startup = async () => {\n        if (window[WINDOW_KEY] === undefined) {\n            window[WINDOW_KEY] = {};\n            await fetch_inventory();\n            await fetch_closet();\n        } else {\n            console.log(`Dataset already exists at \'%cwindow.${WINDOW_KEY}%c\', using that...`, \'font-family: monospace;\', \'\');\n        }\n\n        window[WINDOW_KEY][\'functions\'] = {};\n        \n        window[WINDOW_KEY][\'functions\'][\'getDogOnlineData\'] = (...fields) => {\n            const base = window[WINDOW_KEY][\'data\'];\n            let current = base;\n            for (field of fields) {\n                current = current[field];\n            }\n            return structuredClone(current);\n        }\n\n        window[WINDOW_KEY][\'functions\'][\'getDogOnlineDataMain\'] = () => window[WINDOW_KEY][\'functions\'][\'getDogOnlineData\'](0, \'result\', \'data\', \'json\');\n        window[WINDOW_KEY][\'functions\'][\'getDogOnlineCloset\'] = () => window[WINDOW_KEY][\'closet\'][0][\'result\'][\'data\'][\'json\'][\'cosmetics\'];\n    };\n\n    await startup();\n\n    const dogdata = () => window[WINDOW_KEY][\'functions\'][\'getDogOnlineDataMain\']();\n    const dogcloset = () => window[WINDOW_KEY][\'functions\'][\'getDogOnlineCloset\']();\n\n    const inventory = structuredClone(dogdata().inventory);\n    const internal_categories = new Set();\n\n    inventory.forEach(\n        item => {\n            Object.keys(item).forEach(key => internal_categories.add(key));\n            item.categories.forEach(key => internal_categories.add(key));\n        }\n    );\n    NON_CATEGORIES.forEach(key => internal_categories.delete(key));\n    internal_categories.add(\'closet\');\n    const isCategory = (item, category) => {\n        if (Object.hasOwn(item, category)) {\n            if (item[category] !== null && item[category] !== false) {\n                return true;\n            }\n        }\n        if (Array.isArray(item.categories) && item.categories.length > 0) {\n            if (item.categories.some(itemCategory => itemCategory === category)) {\n                return true;\n            }\n        }\n        return false;\n    }\n    const sorted_by_category = {};\n    internal_categories.forEach(internalCategory => {\n        sorted_by_category[internalCategory] = [];\n    });\n    inventory.forEach(item => {\n        internal_categories.forEach(category => {\n            if (isCategory(item, category)) {\n                sorted_by_category[category].push(item);\n            }\n        });\n    });\n\n    structuredClone(dogcloset()).forEach(item => {\n        sorted_by_category[\'closet\'].push(item);\n    });\n\n    const categorized = [...(new Set(Object.values(sorted_by_category).flat()))];\n    const uncategorized = [...(new Set(inventory))].filter(item => !(new Set(categorized)).has(item));\n\n    sorted_by_category[\'cosmetic\'] = [...(new Set([...sorted_by_category[\'isCosmetic\'], ...sorted_by_category[\'cosmetic\']]))];\n    delete sorted_by_category[\'isCosmetic\'];\n\n    sorted_by_category[\'uncategorized\'] = uncategorized;\n\n    const embedded_html = new Set();\n\n    const uuidToDogName = uuid => dogdata().dogs.find(dog => dog?.uuid?.toLocaleLowerCase().trim() === uuid.toLocaleLowerCase().trim())?.name ?? \'Unknown dog name!\';\n\n    const all = [...(() => {\n        const set = new Set();\n        Object.entries(sorted_by_category).forEach(entry => {\n            const [category, items] = entry;\n            items.forEach(item => set.add(item));\n        });\n        return set;\n    })()];\n\n    const consume_check = item => {\n        try {\n            return ((item => Object?.keys(item?.consumedByDog)?.filter(uuid => item?.consumedByDog?.[uuid])?.map(uuidToDogName))(item))\n        } catch (err) {\n            return null;\n        }\n    };\n\n    for (const item of all) {\n        const dataset = {\n            consumedByDog: consume_check(item),\n            count: item.count,\n            description: item.description?.split(\'\\n\')?.map(line => line.trim()),\n            id: item.id?.trim(),\n            image: new URL(item.image.trim(), \'https://dogonline.net/\').href,\n            name: item.name?.trim(),\n            price: item.price,\n            provides: (item.provides === undefined || (item.book === null && item.food === null)) ? null : structuredClone({\n                ...((item.book !== null && typeof item.book === \'object\') ? item.book : {}),\n                ...((item.food !== null && typeof item.food === \'object\') ? item.food : {}),\n            })\n        };\n\n        // mutate in place\n        Object.keys(item).forEach(key => delete item[key]);\n        Object.entries(dataset).forEach(entry => {\n            const [key, value] = entry;\n            item[key] = value;\n        })\n        \n        if ((() => {\n            const doc = PARSER.parseFromString(item.description, \'text/html\');\n            const nodes = doc.querySelector(\'html body\')?.querySelectorAll(\'*\') ?? [];\n            return nodes.length > 0;\n        })()) {\n            embedded_html.add(item);\n        }\n    }\n\n    const signatures = new Set();\n\n    embedded_html.forEach(item => {\n        item.description = `<div class=\"${EMBEDDED_HTML_WRAPPER_CLASS}\">${item.description}</div>`;\n        const doc = PARSER.parseFromString(item.description, \'text/html\');\n        const root = doc.querySelector(`html body div.${EMBEDDED_HTML_WRAPPER_CLASS}`);\n        root.querySelectorAll(\'*\').forEach(node => {\n            signatures.add(`<${node.tagName.toLocaleLowerCase()}${node.className.trim().length === 0 ? \'\' : ` class=\"${node.className.trim()}\"`}>`);\n        });\n    });\n\n    const combatBaseDescription = parent => {\n        if (!parent) return \"\";\n        let extracted = \"\";\n        const traverse = node => {\n            if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains(\'modal-combat-title\')) return false;\n            if (node.nodeType === Node.TEXT_NODE) extracted += node.textContent;\n            else if (node.nodeName === \'BR\') extracted += \'\\n\';\n            for (let child of node.childNodes) {\n                const keepGoing = traverse(child);\n                if (!keepGoing) return false;\n            }\n            return true;\n        }\n        traverse(parent);\n        return extracted.trim();\n    }\n\n    const non_combat_items_with_html = new Set([...embedded_html]);\n\n    embedded_html.forEach(item => {\n        const doc = PARSER.parseFromString(item.description, \'text/html\');\n        const root = doc.querySelector(`html body div.${EMBEDDED_HTML_WRAPPER_CLASS}`);\n        const title = root.querySelector(\'div.modal-combat-title\');\n        const stats = root.querySelectorAll(\'div.modal-combat-stat-line\');\n        if (title !== null || stats.length > 0) {\n            item.description = {\n                text: combatBaseDescription(root).split(\'\\n\').map(line => line.trim()).filter(line => line !== \'\'),\n                title: title?.textContent ?? \'\',\n                stats: structuredClone(stats.length > 0 ? [...stats.values()].map(line => line.textContent.trim()).filter(line => line !== \'\') : []).map(line => {\n                    const matches = /^\\s*(.+?)\\s*:\\s*(.+?)\\s*$/.exec(line);\n                    if (matches.length !== 3) return line;\n                    return {\n                        field: matches[1].trim(),\n                        value: matches[2].trim()\n                    }\n                }),\n            };\n            non_combat_items_with_html.delete(item);\n        }\n    });\n\n    [...non_combat_items_with_html].forEach(item => {\n        const doc = PARSER.parseFromString(item.description, \'text/html\');\n        const root = doc.querySelector(`html body div.${EMBEDDED_HTML_WRAPPER_CLASS}`);\n        if (root) {\n            const replaced = root.innerHTML.replace(/<br\\s*\\/?>/gi, \'\\n\');\n            const div = document.createElement(\'div\');\n            div.innerHTML = replaced;\n            item.description = div.textContent.split(\'\\n\').map(line => line.trim()).filter(line => line !== \'\');\n        } else {\n            item.description = [];\n        }\n    })\n\n    const non_consumables = all.filter(item => ![...(new Set([...sorted_by_category[\'food\'], ...sorted_by_category[\'book\']]))].includes(item));\n    non_consumables.forEach(item => { delete item[\'consumedByDog\']; });\n\n    all.filter(item => item.provides === null).forEach(item => { delete item[\'provides\']; });\n\n    const blob_to_data_url = blob => new Promise((resolve, reject) => {\n        const reader = new FileReader();\n        reader.onload = () => resolve(reader.result);\n        reader.onerror = () => reject(reader.error);\n        reader.readAsDataURL(blob);\n    });\n\n    const image_data_cache = new Map();\n    const fetch_image_data_url = source => {\n        if (source.startsWith(\'data:\')) return Promise.resolve(source);\n        const url = new URL(source, location.href);\n        if (url.origin !== location.origin) {\n            throw new Error(`Not on dogonline.net???`);\n        }\n        if (!image_data_cache.has(url.href)) {\n            image_data_cache.set(url.href, (async () => {\n                const response = await fetch(url.href, {\n                    mode: \'same-origin\',\n                    credentials: \'same-origin\',\n                    signal: AbortSignal.timeout(30000),\n                });\n                if (!response.ok) throw new Error(`Image request failed (${response.status}): ${url.href}`);\n                const blob = await response.blob();\n                if (!blob.type.startsWith(\'image/\')) {\n                    throw new Error(`Expected image, got ${blob.type || \'something???\'}: ${url.href}`);\n                }\n                return blob_to_data_url(blob);\n            })());\n        }\n        return image_data_cache.get(url.href);\n    };\n\n    let next_image_index = 0;\n    let embedded_image_count = 0;\n    console.log(`Embedding images for ${all.length} items...`);\n    await Promise.all(Array.from({ length: Math.min(4, all.length) }, async () => {\n        while (next_image_index < all.length) {\n            const item = all[next_image_index++];\n            item.image = await fetch_image_data_url(item.image);\n            embedded_image_count++;\n            if (embedded_image_count % 25 === 0 || embedded_image_count === all.length) {\n                console.log(`Images embedded: ${embedded_image_count}/${all.length}`);\n            }\n        }\n    }));\n\n\n    const finalized = {\n        image_base_url: \'\',\n        inventory: Object.fromEntries(Object.entries(sorted_by_category).filter(entry => {\n            const [section, array] = entry;\n            return array.length > 0;\n        })),\n        does_this_work: true,\n    };\n\n    console.log(`There are >>> ${embedded_html.size} <<< items with embedded html!`);\n    console.log(`There are >>> ${signatures.size} <<< unique DOM element signatures!`);\n    console.log(\'----------------------------------------------------------\');\n    console.log(\n        [\n            `%cTotals:`,\n            `  - Unique inventory items: ${all.length}`, \n            `  - Non-consumables: ${non_consumables.length}`, \n            `  - Uncategorized: ${sorted_by_category[\'uncategorized\'].length}`, \n            `  - Non-Combat Items with HTML: ${non_combat_items_with_html.size}`\n        ].join(\'\\n\'),\n        \'font-family: monospace;\'\n    );\n\n    window[WINDOW_KEY].finalized = finalized;\n    console.log(`Parsed data saved to \'%cwindow.${WINDOW_KEY}.finalized%c\'!`, \'font-family: monospace;\', \'\')\n    console.log(\'Fetched data:\', window[WINDOW_KEY][\'data\']);\n    console.log(\'Parsed data:\', finalized);\n\n    const compress = async text => {\n        const bytes = new TextEncoder().encode(text);\n        const stream = new Response(bytes).body.pipeThrough(new CompressionStream(\'gzip\'));\n        const blob = await new Response(stream).blob();\n        const data_url = await blob_to_data_url(blob);\n        return data_url.slice(data_url.indexOf(\',\') + 1);\n    }\n\n    window[WINDOW_KEY].compress = compress;\n\n    const hyphenize = text => text.padStart(Math.floor((120 + text.length) / 2), \'-\').padEnd(120, \'-\');\n\n    const base64_data_split_120_chars = [\n        \'\',\n        hyphenize(\'BEGIN-COMPRESSED-BASE64-ENCODED-OUTPUT\'),\n        ...((await compress(JSON.stringify(finalized))).match(/.{1,120}/g) ?? []),\n        hyphenize(\'END-COMPRESSED-BASE64-ENCODED-OUTPUT\'),\n        \'\'\n    ].join(\'\\n\');\n\n    window[WINDOW_KEY].encoded = base64_data_split_120_chars.trim();\n\n    Object.defineProperty(window, \'DOGDATA\', {\n        get() {\n            navigator.clipboard.writeText(base64_data_split_120_chars.trim())\n                .then(() => {\n                    console.log(`Copied ${base64_data_split_120_chars.trim().length} characters to the clipboard. (That\'s a lot of characters...)`);\n                })\n                .catch(err => {\n                    console.error(\'Failed to copy to clipboard automatically???: \', err);\n                });\n            return null;\n        },\n        enumerable: true,\n        configurable: true,\n    });\n\n    console.log(base64_data_split_120_chars);    \n    console.log(\'Paste the above data into the tool.\\n\\nAdditionally, you can type %cDOGDATA%c into the console and press Enter to copy it that way.\\n\\nMake sure that you have clicked /literally/ anywhere on the webpage before attempting to do so though because otherwise it doesn\\\'t work for some reason???\', \'font-family: monospace; font-weight: bold\', \'\');\n    console.log(\'LASTLY: If you wish to update the DOGDATA that is pulled, you must refresh. This is just a simple gate to prevent spam-pasting the script into the console. Mitigation, you know?\');\n})();'
+        // found in DOGDATA-FETCH-SCRIPT.js in the repo (https://github.com/Savestate2A03/dogonline-torment-nexus-tracker/)
+        // this is the minimized version...
+        const SCRIPT_TO_GET_DATA = 'await(async()=>{const o=\"__DOGONLINE_INVENTORY_INFO_TEMP_STORAGE_WINDOW_KEY__\",i=\"item-has-html-in-its-description-and-this-is-a-wrapper-to-indicate-such\";const r=new DOMParser;let t=null;console.log(\"----------------------------------------------------------\");window[o]={};{console.warn(\"Current session does not have data pulled yet, attempting to do so now!\");const x=1,O={0:{json:null,meta:{values:[\"undefined\"],v:1}},1:{json:null,meta:{values:[\"undefined\"],v:1}},2:{json:null,meta:{values:[\"undefined\"],v:1}}},D=\"__Secure-better-auth.session_token\";var e=document.cookie.split(\"; \").find(e=>e.startsWith(D+\"=\"))?.split(\"=\")[1],n=new Headers,a=new URLSearchParams({batch:String(x),input:JSON.stringify(O)}).toString(),e=(n.set(\"Accept\",\"*/*\"),n.set(\"Accept-Encoding\",\"gzip, deflate, br, zstd\"),n.set(\"Accept-Language\",\"en-US,en;q=0.9\"),n.set(\"Connection\",\"keep-alive\"),n.set(\"Cookie\",D+\"=\"+e),{url:\"https://dogonline.net/api/trpc/doghouse.getState,messages.list,toys.getActiveToyWidgets?\"+a,body:{method:\"GET\",headers:n}});console.warn(\"Attempting to send request:\",e);try{var s=await fetch(e.url,e.body);if(!s.ok)throw new Error(\"Error fetching data from dogonline. Status: \"+s.status);console.log(\"Response recieved and was successful!\",s),window[o].data=await s.json(),console.log(`The fetched data can be viewed by typing the following into the browser console: %cwindow.${o}.data`,\"font-family: monospace;\")}catch(e){throw new Error(\"Failed while attempting to fetch!\",e)}}await 0;{console.warn(\"Current session does not have closet pulled yet, attempting to do so now!\");const A=1,q={0:{json:{dogIndex:null},meta:{values:{dogIndex:[\"undefined\"]},v:1}}},k=\"__Secure-better-auth.session_token\";a=document.cookie.split(\"; \").find(e=>e.startsWith(k+\"=\"))?.split(\"=\")[1],n=new Headers,e=new URLSearchParams({batch:String(A),input:JSON.stringify(q)}).toString(),n.set(\"Accept\",\"*/*\"),n.set(\"Accept-Encoding\",\"gzip, deflate, br, zstd\"),n.set(\"Accept-Language\",\"en-US,en;q=0.9\"),n.set(\"Connection\",\"keep-alive\"),n.set(\"Cookie\",k+\"=\"+a),a={url:\"https://dogonline.net/api/trpc/dressup.getState?\"+e,body:{method:\"GET\",headers:n}},console.warn(\"Attempting to send request:\",a);try{var l=await fetch(a.url,a.body);if(!l.ok)throw new Error(\"Error fetching data from dogonline. Status: \"+l.status);console.log(\"Response recieved and was successful!\",l),window[o].closet=await l.json(),console.log(`The fetched data can be viewed by typing the following into the browser console: %cwindow.${o}.closet`,\"font-family: monospace;\")}catch(e){throw new Error(\"Failed while attempting to fetch!\",e)}}await 0,window[o].functions={},window[o].functions.getDogOnlineData=(...e)=>{let t=window[o].data;for(field of e)t=t[field];return structuredClone(t)},window[o].functions.getDogOnlineDataMain=()=>window[o].functions.getDogOnlineData(0,\"result\",\"data\",\"json\"),await!(window[o].functions.getDogOnlineCloset=()=>window[o].closet[0].result.data.json.cosmetics);const c=()=>window[o].functions.getDogOnlineDataMain();s=structuredClone(c().inventory);const d=new Set,u=(s.forEach(e=>{Object.keys(e).forEach(e=>d.add(e)),e.categories.forEach(e=>d.add(e))}),[\"categories\",\"consumedByDog\",\"description\",\"count\",\"id\",\"image\",\"name\",\"price\"].forEach(e=>d.delete(e)),d.add(\"closet\"),{}),M=(d.forEach(e=>{u[e]=[]}),s.forEach(n=>{d.forEach(e=>{var t,o;t=n,o=e,(Object.hasOwn(t,o)&&null!==t[o]&&!1!==t[o]||!!(Array.isArray(t.categories)&&0<t.categories.length&&t.categories.some(e=>e===o)))&&u[e].push(n)})}),structuredClone(window[o].functions.getDogOnlineCloset()).forEach(e=>{u.closet.push(e)}),[...new Set(Object.values(u).flat())]);var e=[...new Set(s)].filter(e=>!new Set(M).has(e)),p=(u.cosmetic=[...new Set([...u.isCosmetic,...u.cosmetic])],delete u.isCosmetic,u.uncategorized=e,new Set);const P=t=>c().dogs.find(e=>e?.uuid?.toLocaleLowerCase().trim()===t.toLocaleLowerCase().trim())?.name??\"Unknown dog name!\",g=[...(()=>{const t=new Set;return Object.entries(u).forEach(e=>{var[,e]=e;e.forEach(e=>t.add(e))}),t})()];for(const T of g){var $={consumedByDog:(e=>{try{return t=e,Object?.keys(t?.consumedByDog)?.filter(e=>t?.consumedByDog?.[e])?.map(P)}catch(e){return null}var t})(T),count:T.count,description:T.description?.split(\"\\n\")?.map(e=>e.trim()),id:T.id?.trim(),image:new URL(T.image.trim(),\"https://dogonline.net/\").href,name:T.name?.trim(),price:T.price,provides:void 0===T.provides||null===T.book&&null===T.food?null:structuredClone({...null!==T.book&&\"object\"==typeof T.book?T.book:{},...null!==T.food&&\"object\"==typeof T.food?T.food:{}})};Object.keys(T).forEach(e=>delete T[e]),Object.entries($).forEach(e=>{var[e,t]=e;T[e]=t}),0<(r.parseFromString(T.description,\"text/html\").querySelector(\"html body\")?.querySelectorAll(\"*\")??[]).length&&p.add(T)}const m=new Set,h=(p.forEach(e=>{e.description=`<div class=\"${i}\">${e.description}</div>`,r.parseFromString(e.description,\"text/html\").querySelector(\"html body div.\"+i).querySelectorAll(\"*\").forEach(e=>{m.add(`<${e.tagName.toLocaleLowerCase()}${0===e.className.trim().length?\"\":` class=\"${e.className.trim()}\"`}>`)})}),new Set([...p]));p.forEach(e=>{var t=r.parseFromString(e.description,\"text/html\").querySelector(\"html body div.\"+i),o=t.querySelector(\"div.modal-combat-title\"),n=t.querySelectorAll(\"div.modal-combat-stat-line\");(null!==o||0<n.length)&&(e.description={text:(e=>{if(!e)return\"\";let o=\"\";const n=e=>{if(e.nodeType===Node.ELEMENT_NODE&&e.classList.contains(\"modal-combat-title\"))return!1;e.nodeType===Node.TEXT_NODE?o+=e.textContent:\"BR\"===e.nodeName&&(o+=\"\\n\");for(var t of e.childNodes)if(!n(t))return!1;return!0};return n(e),o.trim()})(t).split(\"\\n\").map(e=>e.trim()).filter(e=>\"\"!==e),title:o?.textContent??\"\",stats:structuredClone(0<n.length?[...n.values()].map(e=>e.textContent.trim()).filter(e=>\"\"!==e):[]).map(e=>{var t=/^\\s*(.+?)\\s*:\\s*(.+?)\\s*$/.exec(e);return 3!==t.length?e:{field:t[1].trim(),value:t[2].trim()}})},h.delete(e))}),[...h].forEach(e=>{var t,o=r.parseFromString(e.description,\"text/html\").querySelector(\"html body div.\"+i);o?(o=o.innerHTML.replace(/<br\\s*\\/?>/gi,\"\\n\"),(t=document.createElement(\"div\")).innerHTML=o,e.description=t.textContent.split(\"\\n\").map(e=>e.trim()).filter(e=>\"\"!==e)):e.description=[]});n=g.filter(e=>![...new Set([...u.food,...u.book])].includes(e));n.forEach(e=>{delete e.consumedByDog}),g.filter(e=>null===e.provides).forEach(e=>{delete e.provides});const f=n=>new Promise((e,t)=>{const o=new FileReader;o.onload=()=>e(o.result),o.onerror=()=>t(o.error),o.readAsDataURL(n)}),w=new Map;let b=0,y=0;console.log(`Embedding images for ${g.length} items...`),await Promise.all(Array.from({length:Math.min(4,g.length)},async()=>{for(;b<g.length;){var e=g[b++];e.image=await(e=>{if(e.startsWith(\"data:\"))return Promise.resolve(e);const t=new URL(e,location.href);if(t.origin!==location.origin)throw new Error(\"Not on dogonline.net???\");return w.has(t.href)||w.set(t.href,(async()=>{var e=await fetch(t.href,{mode:\"same-origin\",credentials:\"same-origin\",signal:AbortSignal.timeout(3e4)});if(!e.ok)throw new Error(`Image request failed (${e.status}): `+t.href);e=await e.blob();if(e.type.startsWith(\"image/\"))return f(e);throw new Error(`Expected image, got ${e.type||\"something???\"}: `+t.href)})()),w.get(t.href)})(e.image),++y%25!=0&&y!==g.length||console.log(`Images embedded: ${y}/`+g.length)}}));a={image_base_url:\"\",inventory:Object.fromEntries(Object.entries(u).filter(e=>{var[,e]=e;return 0<e.length})),does_this_work:!0},console.log(`There are >>> ${p.size} <<< items with embedded html!`),console.log(`There are >>> ${m.size} <<< unique DOM element signatures!`),console.log(\"----------------------------------------------------------\"),console.log([\"%cTotals:\",\"  - Unique inventory items: \"+g.length,\"  - Non-consumables: \"+n.length,\"  - Uncategorized: \"+u.uncategorized.length,\"  - Non-Combat Items with HTML: \"+h.size].join(\"\\n\"),\"font-family: monospace;\"),window[o].finalized=a,console.log(`Parsed data saved to \'%cwindow.${o}.finalized%c\'!`,\"font-family: monospace;\",\"\"),console.log(\"Fetched data:\",window[o].data),console.log(\"Parsed data:\",a),l=async e=>{e=(new TextEncoder).encode(e),e=new Response(e).body.pipeThrough(new CompressionStream(\"gzip\")),e=await new Response(e).blob(),e=await f(e);return e.slice(e.indexOf(\",\")+1)},window[o].compress=l,e=e=>e.padStart(Math.floor((120+e.length)/2),\"-\").padEnd(120,\"-\");const v=[\"\",e(\"BEGIN-COMPRESSED-BASE64-ENCODED-OUTPUT\"),...(await l(JSON.stringify(a))).match(/.{1,120}/g)??[],e(\"END-COMPRESSED-BASE64-ENCODED-OUTPUT\"),\"\"].join(\"\\n\");window[o].encoded=v.trim(),Object.defineProperty(window,\"DOGDATA\",{get(){return navigator.clipboard.writeText(v.trim()).then(()=>{console.log(`Copied ${v.trim().length} characters to the clipboard. (That\'s a lot of characters...)`),null!==t&&\"function\"==typeof t&&t()}).catch(e=>{console.error(\"Failed to copy to clipboard automatically???: \",e)}),null},enumerable:!0,configurable:!0}),void 0===window.getStyleObject&&(window.getStyleObject=e=>{var t=getComputedStyle(e),o={};for(const n in t)isNaN(n)&&void 0!==t[n]&&(o[n]=t[n]);return o});{const z={backgroundColor:\"rgba(0,0,0,0.65)\",position:\"fixed\",inset:\"0\",display:\"grid\",placeItems:\"center\",overflowY:\"auto\",zIndex:\"999\",pointerEvents:\"auto\"},U={pointerEvents:\"auto\",backgroundColor:\"var(--surface-bg)\",borderRadius:\"10px\",width:\"90vw\",maxWidth:\"500px\",padding:\"30px\",textAlign:\"center\"},F={display:\"flex\",flexDirection:\"column\",alignItems:\"center\",textAlign:\"center\",pointerEvents:\"auto\"},B={margin:\"15px auto\",maxWidth:\"330px\",justifyContent:\"center\",flex:\"1 1\",display:\"flex\",flexFlow:\"column\",pointerEvents:\"auto\"},G={display:\"flex\",flexDirection:\"column\",gap:\"20px\",pointerEvents:\"auto\"},W={backgroundColor:\"color-mix(in srgb, #2f64c0 50%, #4d8eff)\",border:\"3px solid\",borderColor:\"color-mix(in srgb, #1f4a94 50%, #0771c2)\",display:\"inline-flex\",alignItems:\"center\",justifyContent:\"center\",borderRadius:\"12px\",padding:\"0 20px\",fontSize:\"24px\",fontFamily:\"inherit\",fontWeight:\"400\",minHeight:\"45px\",color:\"white\",userSelect:\"none\",textDecoration:\"none\",flexDirection:\"column\",pointerEvents:\"auto\",position:\"relative\",top:\"0px\",left:\"0px\"},H={userSelect:\"none\",display:\"none\"};var n=document.createElement(\"div\"),a=document.createElement(\"div\"),e=document.createElement(\"div\"),E=document.createElement(\"div\"),C=document.createElement(\"div\"),S=document.createElement(\"h2\");const j=document.createElement(\"button\"),N=document.createElement(\"div\"),L=(Object.assign(n.style,z),Object.assign(a.style,U),Object.assign(e.style,F),Object.assign(E.style,B),Object.assign(C.style,G),Object.assign(j.style,W),Object.assign(N.style,H),S.textContent=\"DOGDATA\",j.textContent=\"Copy inventory data to clipboard\",j.type=\"button\",N.textContent=\"You can close this dialogue box now by clicking anywhere outside of it.\",C.appendChild(S),C.appendChild(j),C.appendChild(N),E.appendChild(C),e.appendChild(E),a.appendChild(e),n.appendChild(a),document.body.appendChild(n),{button:getStyleObject(j)}),_={button:{pressed:!1,listeners:null,backdrop:!1}},I=e=>{var t=_.button.pressed&&e;j.style.backgroundColor=t?\"#1c4792\":e?\"#2e5ba8\":L.button.backgroundColor,j.style.borderColor=t?\"rgb(10, 48, 89)\":e?\"rgb(20, 66, 115)\":L.button.borderColor,j.style.top=t?\"2px\":L.button.top,j.style.left=t?\"2px\":L.button.left,j.style.color=t?\"#aaa\":L.button.color},R=()=>{_.button.pressed=!1,_.button.listeners?.abort(),_.button.listeners=null,I(j.matches(\":hover\"))};n.onmousedown=function(e){0===e.button&&(_.button.backdrop=e.target===this)},n.onmouseup=function(e){0===e.button&&e.target!==this&&(_.button.backdrop=!1)},n.onclick=function(e){e.target===this&&_.button.backdrop&&(_.button.backdrop=!1,R(),this.remove())},j.onmouseenter=function(e){0==(1&e.buttons)&&R(),I(!0)},j.onmouseleave=function(e){I(!1)},j.onmousedown=function(e){var t;0===e.button&&(R(),_.button.pressed=!0,_.button.listeners=new AbortController,e=e=>{\"mouseup\"===e.type&&0!==e.button||(\"blur\"===e.type&&(_.button.backdrop=!1),R())},t=_.button.listeners.signal,window.addEventListener(\"mouseup\",e,{capture:!0,signal:t}),window.addEventListener(\"blur\",e,{signal:t}),window.addEventListener(\"pointercancel\",e,{capture:!0,signal:t}),window.addEventListener(\"contextmenu\",e,{capture:!0,signal:t}),I(!0))},j.onclick=function(e){j.textContent=\"Copying...\",t=()=>{j.textContent=\"Copied!\",N.style.display=\"\"},DOGDATA}}console.log(v),console.log(\"Paste the above data into the tool.\\n\\nAdditionally, you can type %cDOGDATA%c into the console and press Enter to copy it that way.\\n\\nMake sure that you have clicked /literally/ anywhere on the webpage before attempting to do so though because otherwise it doesn\'t work for some reason???\",\"font-family: monospace; font-weight: bold\",\"\"),console.log(\"LASTLY: If you wish to update the DOGDATA that is pulled, you must refresh. This is just a simple gate to prevent spam-pasting the script into the console. Mitigation, you know?\"),console.log(\"-----------------------\"),console.log(\"EDIT: NEVERMIND I HAVE FINALLY ADDED A PHYSICAL BUTTON!\")})();';
 
         async function decompress(base64) {
             const binary = atob(base64);
@@ -1615,6 +1659,7 @@
             {
                 scale = 1,
                 bg = getComputedStyle(document.body).backgroundColor,
+                download = true,
             } = {},
         ) {
             const element = document.getElementById(elementId);
@@ -1658,7 +1703,7 @@
                 inset: 'auto',
                 opacity: '1',
             });
-            clone.querySelector('#screenshot-button')?.remove();
+            clone.querySelectorAll('#screenshot-button, #copy-to-clipboard-button').forEach(button => button.remove());
             clone.querySelectorAll('.section-remove-button').forEach(button => button.remove());
 
             const font_rules = [];
@@ -1733,14 +1778,19 @@
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
             if (!blob) throw new Error('Failed to export canvas as PNG.');
 
-            const download_url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = download_url;
-            link.download = filename;
-            document.body.append(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(download_url), 10000);
+            if (download) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.append(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }
+
+            // return blob regardless. download button throws it away
+            return blob;
         }
 
     </script>
@@ -1758,56 +1808,30 @@
                     session!</button></span>
         </div>
         <div id="whats-new" style="transform: scale(0.75); transform-origin: top left;">
-            <div id="whats-new-opener"><span id="whats-new-expand">[+]</span> What's new in v1.0.2?</div>
+            <div id="whats-new-opener"><span id="whats-new-expand">[+]</span> What's new in v1.0.3?</div>
             <div id="whats-new-content-wrapper">
                 <div id="whats-new-content">
-                    <div style="margin-bottom: 12px; font-size: 32px;">10/29/2026 | Lots of new updates!</div>
+                    <div style="margin-bottom: 12px; font-size: 32px;">11/6/2026 | Some helpful updates!</div>
                     <hr />
                     <div style="padding-left: 20px; margin-bottom: 16px;">
-                        I had a backlog of bugfixes, feature requests, and changes I wanted to make outside of that
-                        which I would like to introduce you to in the latest version (v1.0.2).
+                        A few quality of life changes comes with this set of updates today. Nothing major, just
+                        things that have been overdue and are finally implemented.
                         <br /><br />
                         As always, if you
-                        experience any new bugs, or have feature requests, let me know in the discord!
+                        experience any new bugs, or have feature requests, let me know in the Discord!
                     </div>
                     <div style="padding-left: 20px">- Estradiol (aka Rei Wolf)</div>
                     <hr />
-                    <div style="font-size: 28px">Bugfixes</div>
-                    <div>
-                        <ul style="list-style-type: square; margin-top: 4px; margin-bottom: 18px;">
-                            <li style="margin-bottom: 3px;">Removed items box becomes scrollable when it reaches the
-                                height of the window</li>
-                            <li style="margin-bottom: 3px;">Change scaling system to use CSS transforms instead of zoom
-                                (fixes weird jank)</li>
-                            <li style="margin-bottom: 3px;">Items no longer break in-between column boundaries</li>
-                            <li style="margin-bottom: 3px;">Removed the viewport restriction as it was entirely
-                                unnecessary (tendency to over-engineer)</li>
-                            <li style="margin-bottom: 3px;">Disabled smooth transitions when fitting zoom / adjusting
-                                column height as it tends to create more noise than actually smooth things out.</li>
-                        </ul>
-                    </div>
                     <div style="font-size: 28px">New Features</div>
                     <div>
                         <ul style="list-style-type: square; margin-top: 4px; margin-bottom: 18px;">
-                            <li style="margin-bottom: 3px;">Column width is no longer an option, replaced by "Items Per
-                                Column"</li>
-                            <li style="margin-bottom: 3px;">Zoom menu auto-minimizes when not being used</li>
-                            <li style="margin-bottom: 3px;">Reduced the timeout for when the "Jump to section" panel
-                                disappears</li>
-                            <li style="margin-bottom: 3px;">Hide individual sections in addition to items!</li>
-                            <li style="margin-bottom: 3px;">
-                                Create modal that shows in top-left corner when you are too zoomed out
-                                to remove items by clicking on them. (needs to be > 0.5x zoom)
-                            </li>
+                            <li style="margin-bottom: 3px;">A button to copy DOGDATA now appears on dogonline.net</li>
+                            <li style="margin-bottom: 3px;">You can now copy your inventory to your clipboard directly</li>
                         </ul>
                     </div>
                     <div style="font-size: 28px">Future Changes</div>
                     <div>
                         <ul style="list-style-type: square; margin-top: 4px; margin-bottom: 18px;">
-                            <li style="margin-bottom: 3px;">
-                                Create physical button that shows up on dogonline.net to copy data instead of having to
-                                type "DOGDATA" into the console as some users are reporting issues with this.
-                            </li>
                             <li style="margin-bottom: 3px;">Add a storage section</li>
                         </ul>
                     </div>
@@ -1979,6 +2003,7 @@
             while (dogdata.version !== CURRENT_DOGDATA_VERSION) {
                 const next_version = get_next_version(dogdata.version);
                 const upgrade = UPGRADE_PATHS[generate_next_upgrade_path_key(dogdata.version)];
+                console.warn(`Upgrading DOGDATA from ${dogdata.version} to ${next_version}...`);
                 if (next_version === null || typeof upgrade !== 'function') {
                     errors.push(`Missing upgrade path for ${dogdata.version}.`);
                     return { finished: false, errors };
@@ -2096,6 +2121,7 @@
                 if (!result.finished) throw new Error(result.errors.join('\n'));
                 updated = true;
                 console.warn(`Upgraded localStorage['${DOGDATA_LOCALSTORAGE_KEY}'] from '${version}' to '${CURRENT_DOGDATA_VERSION}'!`);
+                update_dogdata_in_localstorage(dogdata);
             }
             if (!Array.isArray(dogdata.removed_sections)) {
                 dogdata.removed_sections = [];
@@ -2121,7 +2147,7 @@
             const secondary = document.getElementById('secondary');
             const button = document.getElementById('screenshot-button');
             if (!secondary || !button) return;
-            const maximum_bottom = Math.max(16, window.innerHeight - button.offsetHeight - 16);
+            const maximum_bottom = Math.max(16, window.innerHeight - secondary.offsetHeight - 16);
             const removed_sections = document.getElementById('section-removed-sections');
             const sections_height = removed_sections && removed_sections.style.display !== 'none' ? removed_sections.offsetHeight + 8 : 0;
             secondary.style.setProperty('--removed-items-bottom', `${16 + sections_height}px`);
@@ -2476,7 +2502,7 @@
             if (!bounds) return;
             const factor = {
                 height: 0.95,
-                width: 0.95,
+                width: section_name === null ? 0.95 : 0.35,
             };
             const zoom = get_rendered_view().zoom;
             const step = 0.05;
@@ -2916,35 +2942,71 @@
             ZOOM_SCROLLWHEL_STATE.active = true;
         }
 
-        function create_screenshot_button() {
-            const default_text = 'Take screenshot of inventory';
+        function create_inventory_image_button({ id, text, clipboard = false }) {
             const secondary = document.getElementById('secondary');
             const button = document.createElement('button');
-            button.id = 'screenshot-button';
+            button.id = id;
+            button.type = 'button';
             button.onclick = async () => {
-                if (button.disabled) return;
-                button.disabled = true;
-                button.textContent = 'Cooking your inventory at 350°F...';
                 const main = document.getElementById('main');
-                try {
-                    main.classList.add('force-zoom');
-                    await render_element_as_png('main');
-                } catch (error) {
-                    console.error(error);
-                    alert(error.message);
-                } finally {
-                    main.classList.remove('force-zoom');
-                    button.disabled = false;
-                    button.textContent = default_text;
+                // abort if force-zoom is in progress (should never happen...)
+                if (button.disabled || main.classList.contains('force-zoom')) return;
+                const buttons = secondary.querySelectorAll('#screenshot-button, #copy-to-clipboard-button');
+                buttons.forEach(element => element.disabled = true);
+                button.textContent = 'Cooking at 350°F for 1s...';
+                const deferred = async () => {
+                    let rendering = null;
+                    try {
+                        if (clipboard && (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined')) {
+                            throw new Error('Clipboard failed???');
+                        }
+                        main.classList.add('force-zoom');
+                        rendering = render_element_as_png('main', 'inventory.png', { download: !clipboard });
+                        if (clipboard) {
+                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': rendering })]);
+                        } else {
+                            await rendering;
+                        }
+                    } catch (error) {
+                        button.textContent = 'Failed! (check console)';
+                        console.error(error);
+                        alert(error.message);
+                    } finally {
+                        button.textContent = clipboard ? 'Copied to clipboard!' : 'Image downloaded!';
+                        if (rendering !== null) await rendering.catch(() => { });
+                        setTimeout(() => {
+                            main.classList.remove('force-zoom');
+                            buttons.forEach(element => element.disabled = false);
+                            button.textContent = text;
+                        }, 1500);
+                    }
                 }
+                // delayed so DOM element has time to update the button text and show
+                // the user that the screenshot is currently cooking in the oven...
+                delay(deferred);
             };
-            button.innerText = default_text;
+            button.innerText = text;
             secondary.appendChild(button);
+            return button;
+        }
+
+        function create_screenshot_button() {
+            const button = create_inventory_image_button({ id: 'screenshot-button', text: 'Take screenshot of inventory' });
+            const secondary = document.getElementById('secondary');
             const update_position = () => {
                 if (secondary.style.bottom !== '') update_screenshot_button_position();
             };
-            new ResizeObserver(update_position).observe(button);
+            new ResizeObserver(update_position).observe(secondary);
             window.addEventListener('resize', update_position);
+            return button;
+        }
+
+        function create_copy_to_clipboard_button() {
+            return create_inventory_image_button({
+                id: 'copy-to-clipboard-button',
+                text: 'Copy inventory to clipboard',
+                clipboard: true,
+            });
         }
 
         function create_removed_items_list() {
@@ -3501,6 +3563,7 @@
             document.documentElement.classList.add('has-inventory');
             window.scrollTo(0, 0);
             create_screenshot_button();
+            create_copy_to_clipboard_button();
             create_removed_items_list();
             create_removed_sections_list();
             get_removed_items_from_local_storage();
