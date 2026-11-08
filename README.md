@@ -33,6 +33,15 @@ Open [The Lonely Tower](https://dogonline.net/tower) on dogonline.net, press F12
 <details><summary>Expand to view</summary><img width="1016" height="1216" alt="image" src="https://github.com/user-attachments/assets/86651dc3-5ea2-4176-bc21-3b333c3d5772" /></details>
 
 ## Latest Updates
+**NEW 11/8/2026**<BR />
+- Loot box no longer blocking "run from battle"
+- Buttons keybind indicators no longer break (`white-space: nowrap`)
+- Multiple buttons can be assigned to one action
+- "Clear localStorage and reinit" prompts with a "Are you sure?"
+- "Clear localStorage and reinit" converted to button (same as DOGGI export)
+
+----
+
 **NEW 11/5/2026**<BR />
 - Fix light mode on chrome (actually actually for real for real this time)
 - Add `@top-level-async` to Userscript settings
