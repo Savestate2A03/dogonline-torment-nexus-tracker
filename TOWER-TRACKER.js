@@ -2238,6 +2238,7 @@
     };
 
     const export_loot_for_doggi = name => {
+        // modified cyrb53 algorithm
         const hash_8_characters = str => {
             let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
             for (let i = 0, ch; i < str.length; i++) {
@@ -2264,7 +2265,7 @@
         console.info('Exporting loot for DOGGI!', loot);
         const exported = {
             sources: {},
-            recordedAt: new Date().toISOString(),
+            recordedAt: (new Date().toISOString()),
             name,
             doggiExportVersion: 1,
         };
@@ -2275,7 +2276,8 @@
             };
         }
 
-        exported.sourcesHash = hash_8_characters(JSON.stringify(exported.sources));
+        const hash = hash_8_characters(JSON.stringify(exported.sources));
+        exported['sourcesHash'] = hash;
         const finalized = JSON.stringify(exported, undefined, 2);
         const blob = new Blob([finalized], { type: 'text/plain;charset=utf-8' });
         const objurl = URL.createObjectURL(blob);
@@ -2287,7 +2289,7 @@
         anchor.click();
         document.body.removeChild(anchor);
         URL.revokeObjectURL(objurl);
-    };
+    }
 
     const doggi_button_clicked = (doggi, get_value) => {
         if (!instance.is_current()) return;
@@ -2535,7 +2537,7 @@
         const doggi = document.createElement('div');
         doggi.id = 'tower-option-doggi-export';
         doggi.classList.add('tower-option-button');
-        doggi.textContent = 'Export loot for DOGGI';
+        doggi.textContent = "Export loot for DOGGI";
         doggi.onclick = () => doggi_button_clicked(doggi, get_value);
         list.appendChild(doggi);
 
