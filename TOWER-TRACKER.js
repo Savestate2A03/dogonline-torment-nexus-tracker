@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torment Nexus Tracker
 // @namespace    http://tampermonkey.net/
-// @version      5.0.4
+// @version      5.0.5
 // @description  Torment Nexus Tracker
 // @author       Rei Wolf (aka Estradiol aka Savestate)
 // @match        https://*.dogonline.net/*
@@ -18,7 +18,7 @@
     // store data on window
     const CACHE_KEY = '__DOG_DATA_TOWER_QUEUE_WINDOW_KEY__';
     // increase anytime the localStorage schema changes
-    const TRACKER_VERSION = 7;
+    const TRACKER_VERSION = 8;
     const LOCALSTORAGE_VERSION_KEY = '__SAVED_TOWER_TRACKER_VERSION__';
     const INSTANCE_KEY = '__DOGONLINE_TOWER_TRACKER_INSTANCE__';
     const get_saved_tracker_version = () => {
@@ -226,6 +226,7 @@
         }
         #tower-option-list {
             min-height: 0;
+            padding-bottom: 2px;
         }
         .tower-option-button {
             display: block;
@@ -350,18 +351,8 @@
             }
         }
         .tower-option-list-item-label { }
-        #tower-options-restart {
-            display: block;
-            margin: 16px 0 0;
-            padding: 0;
-            border: 0;
-            background: none;
-            color: var(--options-text);
-            font-family: inherit;
-            text-align: left;
-            cursor: pointer;
-        }
-        #tower-options-restart:hover {
+        #tower-options-restart:hover,
+        #tower-options-restart.confirming {
             color: red;
         }
         #tower-keyboard-bindings {
@@ -407,8 +398,8 @@
             margin-right: 6px;
         }
         #tower-keyboard-bindings input {
-            width: 76px;
-            min-width: 76px;
+            width: 112px;
+            min-width: 112px;
             padding: 1px 5px;
             border: 1px solid var(--options-text, currentColor);
             border-radius: 3px;
@@ -2108,6 +2099,12 @@
             if (previous !== null && inputs.length === previous.length && inputs.every((value, index) => value === previous[index])) return;
         }
 
+        // prevent buttons from being covered by session stats
+        const buttons = document.querySelector('[class^="tower_tuiButtonsSection2__"], [class*=" tower_tuiButtonsSection2__"]');
+        if (buttons !== null) {
+            buttons.style.zIndex = '9999997';
+        }
+
         try {
             if (get_dogonline_style('tower_towerOptions__') !== null) {
                 reorder_tower_options_start_to_top();
@@ -2185,6 +2182,7 @@
         return !['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key);
     };
     const keyboard_key_label = key => key === ' ' ? 'Space' : key.length === 1 ? key.toUpperCase() : key.charAt(0).toUpperCase() + key.slice(1);
+    const keyboard_binding_label = keys => keys.length ? keys.map(keyboard_key_label).join(', ') : '[unset]';
 
     const setup_user_options = () => {
         let options = CACHE.get('user_options');
@@ -2209,13 +2207,20 @@
         if (!options.keyboard_bindings || typeof options.keyboard_bindings !== 'object' || Array.isArray(options.keyboard_bindings)) options.keyboard_bindings = {};
         const used = new Set();
         for (const [role, binding] of Object.entries(TOWER_KEYBOARD_BINDINGS)) {
-            let key = normalize_keyboard_key(options.keyboard_bindings[role]);
-            if (!keyboard_key_allowed(role, key) || used.has(key)) {
-                key = [binding.key, '1', '2', '3', '4', 'e', 'r', 's', 'l', 'q', 'f', 'g', 'z', 'x', 'c', 'v']
-                    .find(candidate => keyboard_key_allowed(role, candidate) && !used.has(candidate));
+            const saved = options.keyboard_bindings[role];
+            const keys = [];
+            for (const value of Array.isArray(saved) ? saved : [saved]) {
+                const key = normalize_keyboard_key(value);
+                if (keyboard_key_allowed(role, key) && !used.has(key) && !keys.includes(key)) keys.push(key);
+                if (keys.length === 3) break;
             }
-            options.keyboard_bindings[role] = key;
-            used.add(key);
+            if (!Array.isArray(saved) && keys.length === 0) {
+                const key = [binding.key, '1', '2', '3', '4', 'e', 'r', 's', 'l', 'q', 'f', 'g', 'z', 'x', 'c', 'v']
+                    .find(candidate => keyboard_key_allowed(role, candidate) && !used.has(candidate));
+                if (key !== undefined) keys.push(key);
+            }
+            options.keyboard_bindings[role] = keys;
+            keys.forEach(key => used.add(key));
         }
 
         if (CACHE.get('native_scroll') === null) {
@@ -2294,7 +2299,6 @@
         input.placeholder = 'Name?';
         input.value = get_value('doggi_export_name');
         input.autocomplete = 'off';
-        input.setAttribute('aria-label', 'DOGGI export name');
         input.style.width = `${bounds.width}px`;
         input.style.height = `${bounds.height}px`;
         const restore = () => {
@@ -2347,6 +2351,14 @@
             window.dispatchEvent(new Event('tower-tracker-options-changed'));
         };
         const get_value = key => CACHE.get('user_options')[key];
+        const update_hide_queue_when_big_option = () => {
+            const disabled = get_value('alwayshidequeuelist') === true;
+            const input = options.querySelector('input[name="hidewhenbig"]');
+            if (input) {
+                input.disabled = disabled;
+                input.closest('.tower-option-list-item').classList.toggle('disabled', disabled);
+            }
+        };
         const update_keyboard_options = () => {
             const disabled = get_value('keyboard') !== true;
             const bindings = options.querySelector('#tower-keyboard-bindings');
@@ -2356,14 +2368,7 @@
                 input.disabled = disabled;
                 input.closest('.tower-option-list-item').classList.toggle('disabled', disabled);
             }
-        };
-        const update_hide_queue_when_big_option = () => {
-            const disabled = get_value('alwayshidequeuelist') === true;
-            const input = options.querySelector('input[name="hidewhenbig"]');
-            if (input) {
-                input.disabled = disabled;
-                input.closest('.tower-option-list-item').classList.toggle('disabled', disabled);
-            }
+            update_hide_queue_when_big_option();
         };
 
         let currently_expanded = false;
@@ -2457,7 +2462,7 @@
         bindings.appendChild(content);
         const hint = document.createElement('div');
         hint.className = 'tower-keyboard-hint';
-        hint.textContent = 'Press a key-bind button, followed by the key you wish to set it to.';
+        hint.textContent = 'Click a key-bind button, then press a key to add or remove it. You can assign up to 3 keys per action.';
         content.appendChild(hint);
         const status = document.createElement('div');
         status.id = 'tower-keyboard-binding-status';
@@ -2483,9 +2488,11 @@
             input.readOnly = true;
             input.autocomplete = 'off';
             input.spellcheck = false;
-            input.value = keyboard_key_label(get_value('keyboard_bindings')[role]);
-            input.title = 'Click, then press a key';
-            input.setAttribute('aria-label', `${binding.group}: ${binding.label} key`);
+            const update_input = () => {
+                input.value = keyboard_binding_label(get_value('keyboard_bindings')[role]);
+                input.size = Math.max(6, input.value.length);
+            };
+            update_input();
             input.onkeydown = event => {
                 if (!instance.is_current()) return;
                 if (event.repeat || event.isComposing) return;
@@ -2497,14 +2504,24 @@
                     return;
                 }
                 const current = get_value('keyboard_bindings');
-                const duplicate = Object.keys(TOWER_KEYBOARD_BINDINGS).find(other => other !== role && current[other] === key);
-                if (duplicate) {
-                    status.innerHTML = `<span>Status:&nbsp;</span>${keyboard_key_label(key)} is already assigned to ${TOWER_KEYBOARD_BINDINGS[duplicate].label.toLowerCase()}.`;
-                    return;
+                const keys = current[role];
+                const index = keys.indexOf(key);
+                if (index !== -1) {
+                    keys.splice(index, 1);
+                } else {
+                    const duplicate = Object.keys(TOWER_KEYBOARD_BINDINGS).find(other => other !== role && current[other].includes(key));
+                    if (duplicate) {
+                        status.innerHTML = `<span>Status:&nbsp;</span>${keyboard_key_label(key)} is already assigned to ${TOWER_KEYBOARD_BINDINGS[duplicate].label.toLowerCase()}.`;
+                        return;
+                    }
+                    if (keys.length >= 3) {
+                        status.innerHTML = '<span>Status:&nbsp;</span>Up to 3 keys can be assigned to an action.';
+                        return;
+                    }
+                    keys.push(key);
                 }
-                current[role] = key;
-                input.value = keyboard_key_label(key);
-                status.innerHTML = `<span>Status:&nbsp;</span>[${binding.label}] -> ${keyboard_key_label(key)}`;
+                update_input();
+                status.innerHTML = `<span>Status:&nbsp;</span>[${binding.label}] -> ${input.value}`;
                 localstorage_save();
                 window.dispatchEvent(new Event('tower-tracker-options-changed'));
                 input.blur();
@@ -2530,12 +2547,31 @@
         clear_loot.onclick = clear_saved_loot;
         list.appendChild(clear_loot);
 
-        const restart = document.createElement('button');
+        const restart = document.createElement('div');
         restart.id = 'tower-options-restart';
-        restart.type = 'button';
+        restart.classList.add('tower-option-button');
         restart.textContent = 'Clear localStorage and Reinit';
         restart.disabled = restarting;
+        const restart_confirmation = { timeout: null, expires: 0 };
+        const reset_confirmation = () => {
+            clearTimeout(restart_confirmation.timeout);
+            restart_confirmation.timeout = null;
+            restart_confirmation.expires = 0;
+            if (!instance.is_current() || !restart.isConnected) return;
+            restart.textContent = 'Clear localStorage and Reinit';
+            restart.classList.remove('confirming');
+        };
         restart.onclick = () => {
+            if (!instance.is_current() || !restart.isConnected || restart.disabled || restarting) return;
+            const confirmed = restart_confirmation.timeout !== null && performance.now() < restart_confirmation.expires;
+            reset_confirmation();
+            if (!confirmed) {
+                restart.textContent = 'Are you sure?';
+                restart.classList.add('confirming');
+                restart_confirmation.expires = performance.now() + 2000;
+                restart_confirmation.timeout = setTimeout(reset_confirmation, 2000);
+                return;
+            }
             void restart_tracker().catch(err => console.error('Could not restart tower tracking???', err));
         };
         list.appendChild(restart);
@@ -3127,11 +3163,11 @@
         };
 
         const KEYS_WITH_HANDLERS = new Set([
-            ...KEYS.OPTION,
+            ...KEYS.OPTION.flat(),
             ...Object.keys(KEYS.DIRECTION),
-            KEYS.LEAVE,
-            KEYS.DROPDOWN,
-            ...KEYS.WEAPONS,
+            ...KEYS.LEAVE,
+            ...KEYS.DROPDOWN,
+            ...KEYS.WEAPONS.flat(),
         ]);
 
         const picker = {
@@ -3389,6 +3425,7 @@
                             top: -6px;
                             pointer-events: none;
                             background-color: black;
+                            white-space: nowrap;
                     }
             `;
             document.head.appendChild(style);
@@ -3483,7 +3520,15 @@
                 assigned.keys.push(key);
             }
             for (const [element, assigned] of assignments) {
-                const key = [...assigned.keys].filter(key => !key.toLowerCase().startsWith('arrow'))[0].toUpperCase();
+                const keys = assigned.keys.filter(key => !key.startsWith('arrow'));
+                const key = (keys.length ? keys : assigned.keys)
+                    .map(
+                        key => key === ' '
+                            ? 'Space'
+                            : key.length === 1
+                                ? key.toUpperCase()
+                                : key.charAt(0).toUpperCase() + key.slice(1)
+                    ).join(', ');
                 const indicator = create_indicator(element, key);
                 indicators.get(element).automatic = true;
                 indicator.dataset.keys = assigned.keys.join(" ");
@@ -3595,8 +3640,11 @@
 
         function bindings() {
             const result = new Map();
-            const assign = (key, element, type = "click", guard = null) =>
-                result.set(key, { element: element ?? null, type, guard });
+            const assign = (keys, element, type = "click", guard = null) => {
+                for (const key of Array.isArray(keys) ? keys : [keys]) {
+                    result.set(key, { element: element ?? null, type, guard });
+                }
+            };
             const scope = tower();
             if (!scope) return result;
 
@@ -3630,16 +3678,16 @@
 
             const bottom = query(scope, "tower_tuiButtonsSection2");
             if (visible(bottom)) {
-                for (const key of [KEYS.LEAVE, KEYS.OPTION[1]]) {
-                    const label =
-                        key === KEYS.LEAVE
-                            ? /^leave (?:the )?tower\b/i
-                            : /^run from (?:battle|fight)\b/i;
-                    const button = [...bottom.querySelectorAll(SELECTORS.BUTTON)].find(
-                        (element) =>
-                            visible(element) && label.test(element.textContent.trim()),
+                for (const [keys, label] of [
+                    [KEYS.LEAVE, /^leave (?:the )?tower\b/i],
+                    [KEYS.OPTION[1], /^run from (?:battle|fight)\b/i],
+                ]) {
+                    const button = [
+                        ...bottom.querySelectorAll(SELECTORS.BUTTON)
+                    ].find(
+                        element => visible(element) && label.test(element.textContent.trim())
                     );
-                    if (button) assign(key, button);
+                    if (button) assign(keys, button);
                 }
             }
 
@@ -3720,14 +3768,20 @@
             if (binding.type === "select") level_select(event, binding.element);
             else if (
                 user_options.disabledweaponsadvancestext === true &&
-                KEYS.WEAPONS.includes(key) && binding.element && binding.guard &&
+                KEYS.WEAPONS.some(keys => keys.includes(key)) &&
+                binding.element &&
+                binding.guard &&
                 has_class(binding.guard, "tower_tuiCombatItems") &&
-                has_class(binding.guard, "tower_disabled") && visible(binding.guard)
+                has_class(binding.guard, "tower_disabled") &&
+                visible(binding.guard)
             ) {
                 process(event);
                 binding.guard.click();
-            } else if (binding.guard && !available(binding.guard)) process(event);
-            else activate(event, binding.element);
+            } else if (binding.guard && !available(binding.guard)) {
+                process(event);
+            } else {
+                activate(event, binding.element);
+            }
             request_indicators();
         }
 
@@ -3787,7 +3841,8 @@
         }
         const mapping = Object.fromEntries(Object.entries(DEFAULT_BINDINGS).map(([key, fallback]) => {
             const value = options.keyboard_bindings?.[key];
-            return [key, typeof value === "string" && value.length ? value.toLowerCase() : fallback];
+            const keys = Array.isArray(value) ? value : [typeof value === "string" && value.length ? value : fallback];
+            return [key, keys.filter(key => typeof key === "string" && key.length).slice(0, 3).map(key => key.toLowerCase())];
         }));
         const next = JSON.stringify(mapping);
         if (installed === window[KEYBOARD_LISTENER] && signature === next) return;
