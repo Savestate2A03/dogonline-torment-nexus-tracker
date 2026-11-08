@@ -2538,7 +2538,7 @@
         clear_loot.id = 'tower-option-clear-loot';
         clear_loot.type = 'button';
         clear_loot.classList.add('tower-option-button');
-        clear_loot.textContent = 'Clear saved loot';
+        clear_loot.textContent = 'Clear session stats';
         clear_loot.onclick = clear_saved_loot;
         list.appendChild(clear_loot);
 
