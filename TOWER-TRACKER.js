@@ -251,15 +251,6 @@
                 left: 1px;
             }
         }
-        :where(button).tower-option-button {
-            appearance: none;
-            border-color: currentColor;
-            border-radius: 0;
-            background: transparent;
-            color: inherit;
-            font: inherit;
-            cursor: pointer;
-        }
         :where(input).tower-option-button {
             appearance: none;
             display: block;
@@ -2279,7 +2270,7 @@
 
         const hash = hash_8_characters(JSON.stringify(exported.sources));
         exported['sourcesHash'] = hash;
-        
+
         const finalized = JSON.stringify(exported, undefined, 2);
         const blob = new Blob([finalized], { type: 'text/plain;charset=utf-8' });
         const objurl = URL.createObjectURL(blob);
