@@ -17,7 +17,7 @@
     // store data on window
     const CACHE_KEY = '__DOG_DATA_TOWER_QUEUE_WINDOW_KEY__';
     // increase anytime the localStorage schema changes
-    const TRACKER_VERSION = 5;
+    const TRACKER_VERSION = 7;
     const LOCALSTORAGE_VERSION_KEY = '__SAVED_TOWER_TRACKER_VERSION__';
     const INSTANCE_KEY = '__DOGONLINE_TOWER_TRACKER_INSTANCE__';
     const get_saved_tracker_version = () => {
@@ -225,6 +225,30 @@
         }
         #tower-option-list {
             min-height: 0;
+        }
+        .tower-option-button {
+            display: block;
+            width: fit-content;
+            margin: 14px auto 0;
+            padding: 4px 16px;
+            border: 1px solid currentColor;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+
+            &:hover {
+                background-color: #333;
+            }
+
+            &:active {
+                background-color: #161616;
+                top: 1px;
+                left: 1px;
+            }
         }
         .tower-option-list-item {
             display: flex;
@@ -2111,6 +2135,16 @@
         MULTISELECT: 'multiselect',
     };
 
+    const clear_saved_loot = () => {
+        if (!instance.is_current()) return;
+        const session = get_session_stats();
+        session.loot.length = 0;
+        session.slain = 0;
+        session.loot_enemy = null;
+        localstorage_save();
+        mob_queue_info_update();
+    };
+
     const create_tower_options = () => {
         const option = (label, key, type, callback) => ({ enabled: false, label, key, type, callback });
         const set_value = (key, value) => {
@@ -2277,6 +2311,14 @@
         }
         content.appendChild(status);
         list.appendChild(bindings);
+
+        const clear_loot = document.createElement('button');
+        clear_loot.id = 'tower-option-clear-loot';
+        clear_loot.type = 'button';
+        clear_loot.classList.add('tower-option-button');
+        clear_loot.textContent = 'Clear saved loot';
+        clear_loot.onclick = clear_saved_loot;
+        list.appendChild(clear_loot);
 
         const restart = document.createElement('button');
         restart.id = 'tower-options-restart';
