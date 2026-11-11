@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torment Nexus Tracker
 // @namespace    http://tampermonkey.net/
-// @version      5.0.5
+// @version      5.0.6
 // @description  Torment Nexus Tracker
 // @author       Rei Wolf (aka Estradiol aka Savestate)
 // @match        https://*.dogonline.net/*
@@ -469,26 +469,6 @@
                 text-align: left;
             }
         }
-        #tower-stats-queue, #tower-stats-loot-list {
-            --mask-height: 100px;
-            mask-image:
-                linear-gradient(to bottom, transparent, black),
-                linear-gradient(to bottom, black, black),
-                linear-gradient(to bottom, black, transparent);
-            mask-repeat: no-repeat, no-repeat, no-repeat;
-            mask-size: 100% 0px, 100% 100%, 100% 0px;
-            mask-position: top center, center 0px, bottom center;
-
-            -webkit-mask-image:
-                linear-gradient(to bottom, transparent, black),
-                linear-gradient(to bottom, black, black),
-                linear-gradient(to bottom, black, transparent);
-            -webkit-mask-repeat: no-repeat, no-repeat, no-repeat;
-            -webkit-mask-size: 100% 0px, 100% 100%, 100% 0px;
-            -webkit-mask-position: top center, center 0px, bottom center;
-
-            animation: adjust-masks 1s linear both paused;
-        }
         #tower-stats-queue {
             margin: 0;
             padding: 0;
@@ -691,7 +671,6 @@
             }
         }
         #tower-stats-loot-list {
-            --mask-height: 24px;
             --internal-offset: 0.01;
             --base-width: 360px;
             --cut-sides: calc(var(--base-width) - (var(--base-width) * var(--internal-offset)));
@@ -980,26 +959,6 @@
         img[class*="tower_portraitImage"]
         .tower-stats-enemy-image-clone {
             filter: grayscale(100%);
-        }
-        @keyframes adjust-masks {
-            0% {
-                mask-size: 100% 0px, 100% calc(100% - var(--mask-height)), 100% var(--mask-height);
-                -webkit-mask-size: 100% 0px, 100% calc(100% - var(--mask-height)), 100% var(--mask-height);
-                mask-position: top center, center 0px, bottom center;
-                -webkit-mask-position: top center, center 0px, bottom center;
-            }
-            10% , 90% {
-                mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height) - var(--mask-height)), 100% var(--mask-height);
-                -webkit-mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height) - var(--mask-height)), 100% var(--mask-height);
-                mask-position: top center, center var(--mask-height), bottom center;
-                -webkit-mask-position: top center, center var(--mask-height), bottom center;
-            }
-            100% {
-                mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height)), 100% 0px;
-                -webkit-mask-size: 100% var(--mask-height), 100% calc(100% - var(--mask-height)), 100% 0px;
-                mask-position: top center, center var(--mask-height), bottom center;
-                -webkit-mask-position: top center, center var(--mask-height), bottom center;
-            }
         }
     `;
 
@@ -2029,21 +1988,6 @@
         }
     };
 
-    // match the fade masks to current scrolling position
-    const update_mob_queue_masks = () => {
-        for (const queue of document.querySelectorAll('#tower-stats-queue, #tower-stats-loot-list')) {
-            if (queue.clientHeight === 0) continue;
-            const overflow = Math.max(0, queue.scrollHeight - queue.clientHeight);
-            const progress = (overflow === 0 || queue.scrollTop <= 0)
-                ? 0
-                : queue.scrollTop >= overflow - 1
-                    ? 1
-                    : queue.scrollTop / overflow;
-            queue.style.animationName = overflow > 0 ? 'adjust-masks' : 'none';
-            queue.style.animationDelay = `${-progress}s`;
-        }
-    };
-
     const mob_queue_css_updates = { previous: null };
 
     // keep track of the display inputs
@@ -2067,10 +2011,6 @@
             CACHE.get('enemy_queue')?.[tilekey]?.[0]?.['clone'] === true, CACHE.get('clone_grayscale'),
             document.querySelector('div[class^="tower_tuiMobPortrait__"], div[class*=" tower_tuiMobPortrait__"]'),
             ...upcoming_mobs.slots.flatMap(slot => [slot, slot.parentElement, slot.firstElementChild]),
-            ...['tower-stats-queue', 'tower-stats-loot-list'].flatMap(id => {
-                const list = document.getElementById(id);
-                return [list, list?.clientHeight, list?.scrollHeight, list?.scrollTop];
-            }),
         ];
     };
 
@@ -2115,7 +2055,6 @@
             else mob_queue_info_hide_queue_only();
 
             update_current_mob_grayscale_animation();
-            update_mob_queue_masks();
             update_upcoming_mobs();
 
             const main = document.querySelector('main[class^="Layout_main"], main[class*=" Layout_main"]');
@@ -2613,6 +2552,12 @@
             style.id = 'tower-stats-style';
             style.textContent = TOWER_STYLE;
             document.head.appendChild(style);
+            // clear existing scroll effects if the tracker script is updated in-place
+            for (const list of document.querySelectorAll('#tower-stats-queue, #tower-stats-loot-list')) {
+                list.onscroll = null;
+                list.style.removeProperty('animation-name');
+                list.style.removeProperty('animation-delay');
+            }
             mob_queue_style_ready = true;
         }
 
@@ -2625,7 +2570,6 @@
         }
 
         const queue = document.getElementById('tower-stats-queue');
-        queue.onscroll = update_mob_queue_masks;
 
         queue.replaceChildren(); // empty children
         const enemies = get_queue() ?? [];
@@ -2735,7 +2679,6 @@
 
         const looted = document.getElementById('tower-stats-loot-list');
         if (looted !== null) {
-            looted.onscroll = update_mob_queue_masks;
             const list = document.createDocumentFragment();
             for (const enemy of session.loot) {
                 const header = document.createElement('div');
@@ -2967,10 +2910,6 @@
         // give reason to update to reduce unnecessary css updates
         const resize = new ResizeObserver(() => update_mob_queue_css_variables('resize'));
         resize.observe(element);
-        const queue = document.getElementById('tower-stats-queue');
-        if (queue !== null) resize.observe(queue);
-        const looted = document.getElementById('tower-stats-loot-list');
-        if (looted !== null) resize.observe(looted);
 
         // give reason to update to reduce unnecessary css updates
         const intersection = new IntersectionObserver(() => update_mob_queue_css_variables('intersection'));
