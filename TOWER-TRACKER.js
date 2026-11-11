@@ -2462,6 +2462,23 @@
         doggi.onclick = () => doggi_button_clicked(doggi, get_value);
         list.appendChild(doggi);
 
+        const clear_stats = document.createElement('div');
+        clear_stats.id = 'tower-options-clear';
+        clear_stats.classList.add('tower-option-button');
+        clear_stats.textContent = 'Clear session stats';
+        clear_stats.onclick = () => {
+            if (!instance.is_current()) {
+                return;
+            }
+            const session = get_session_stats();
+            session.loot.length = 0;
+            session.loot_enemy = null;
+            session.slain = 0;
+            localstorage_save();
+            mob_queue_info_update();
+        }
+        list.appendChild(clear_stats);
+
         const restart = document.createElement('div');
         restart.id = 'tower-options-restart';
         restart.classList.add('tower-option-button');
